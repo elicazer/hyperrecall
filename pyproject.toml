@@ -1,0 +1,53 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "meshmind"
+version = "0.0.1"
+description = "Hypergraph memory for LLM agents — spreading activation, decay, and a portable file format."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Eli Azer" }]
+keywords = [
+    "llm", "memory", "agents", "hypergraph", "spreading-activation",
+    "knowledge-graph", "retrieval", "ai",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "numpy>=1.23",
+    "pyyaml>=6.0",
+    "typer>=0.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.urls]
+Homepage = "https://github.com/eliazer/meshmind"
+Source = "https://github.com/eliazer/meshmind"
+Issues = "https://github.com/eliazer/meshmind/issues"
+
+[project.scripts]
+meshmind = "meshmind.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/meshmind"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/meshmind/storage/schema.sql" = "meshmind/storage/schema.sql"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"

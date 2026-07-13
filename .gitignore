@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.installed.cfg
+*.egg
+
+# Virtualenvs
+.venv/
+venv/
+env/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# MeshMind databases and exports produced by examples
+*.db
+*.db-wal
+*.db-shm
+mesh_export/
+/examples/*_out/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
