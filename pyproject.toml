@@ -32,6 +32,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0"]
+# Real LLM-based ingestion via AWS Bedrock (Claude Opus). Optional: the core
+# stays stdlib + numpy; install with `pip install meshmind[bedrock]`.
+bedrock = ["boto3>=1.34"]
 
 [project.urls]
 Homepage = "https://github.com/eliazer/meshmind"

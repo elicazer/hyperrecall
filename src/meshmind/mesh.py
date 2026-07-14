@@ -19,7 +19,14 @@ from typing import Any
 import numpy as np
 
 from .decay import DecayFn, exponential_decay, get_curve
-from .ingest.extractor import Extraction, extract
+from .ingest.extractor import (
+    ExtractedMemory,
+    Extraction,
+    HeuristicExtractor,
+    LLMExtractor,
+    choose_extractor,
+    extract,
+)
 from .models import (
     CONTRADICTS,
     SUPERSEDES,
@@ -72,6 +79,44 @@ class Mesh:
         self._persist(ex)
         assert ex.primary is not None
         return ex.primary
+
+    def ingest_text(
+        self,
+        text: str,
+        *,
+        context: dict[str, Any] | None = None,
+        confidence: float = 1.0,
+        provenance: dict[str, Any] | None = None,
+        use_llm: bool | None = None,
+        mock_mode: bool = False,
+        extractor: LLMExtractor | HeuristicExtractor | None = None,
+    ) -> ExtractedMemory:
+        """Ingest raw natural-language text with the LLM extractor.
+
+        Unlike :meth:`remember` (which expects you to name participants), this
+        uses the real LLM pipeline (:class:`LLMExtractor`) to decompose the text
+        into entities and one typed N-ary hyperedge, then persists them. When no
+        Bedrock key is configured it transparently falls back to the
+        deterministic :class:`HeuristicExtractor`.
+
+        Pass ``mock_mode=True`` (or inject ``extractor``) to run offline. Returns
+        the validated :class:`ExtractedMemory`; the created nodes and hyperedge
+        are already persisted and recallable.
+        """
+        ext = extractor or choose_extractor(use_llm=use_llm, mock_mode=mock_mode)
+        memory = ext.extract(
+            text,
+            context=context,
+            confidence=confidence,
+            provenance=provenance,
+        )
+        ex = memory.to_extraction(
+            confidence=confidence if confidence != 1.0 else None,
+            context=context,
+            provenance=provenance,
+        )
+        self._persist(ex)
+        return memory
 
     def add_node(self, node: Node) -> Node:
         """Add a pre-built node (embeds its text automatically)."""
