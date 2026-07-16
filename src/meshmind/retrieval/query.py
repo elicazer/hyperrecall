@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+import numpy as np
+
 from ..decay import DecayFn, exponential_decay
 from ..models import CONTRADICTS, SUPERSEDES, Hyperedge, Node
 from ..storage.embeddings import EmbedFn, hash_embed
@@ -33,6 +35,8 @@ class ScoredNode:
     hop: int
     superseded: bool = False
     contradicted_by: list[str] = field(default_factory=list)
+    sim: float = 0.0  # direct query<->node cosine similarity (set when sim_rerank>0)
+    rank_score: float = 0.0  # blended activation+similarity score used for ranking
 
 
 @dataclass
@@ -97,14 +101,24 @@ def recall(
     budget_tokens: int | None = None,
     prefer_newest: bool = True,
     reinforce_on_access: bool = True,
+    sim_rerank: float = 0.0,
     curve: DecayFn = exponential_decay,
 ) -> Subgraph:
     """Retrieve a connected subgraph relevant to ``query``.
 
     See module docstring for the pipeline. ``budget_tokens`` (if given) trims
     the lowest-scoring nodes until the rendered context fits.
+
+    ``sim_rerank`` (0..1) blends direct query<->node cosine similarity into the
+    final ranking. Spreading activation is great at *finding* a relevant
+    neighbourhood but tends to reward well-connected hub nodes (a frequently
+    mentioned person) over the specific statement that actually answers the
+    query. Reranking the whole lit-up neighbourhood by semantic similarity to
+    the query pulls the on-topic nodes back to the top. ``0`` keeps the pure
+    activation ordering (default, backward-compatible).
     """
-    seeds = _find_seeds(store, query, embed=embed, max_seeds=max_seeds)
+    qvec = embed(query)
+    seeds = _find_seeds(store, query, embed=embed, max_seeds=max_seeds, qvec=qvec)
     result = spread(store, seeds, k_hops=k_hops, curve=curve)
 
     # Materialise scored nodes.
@@ -119,10 +133,14 @@ def recall(
     _annotate_supersession(store, by_id)
     _annotate_contradiction(store, by_id)
 
+    if sim_rerank > 0.0 and scored:
+        _apply_sim_rerank(store, scored, qvec, weight=sim_rerank)
+
     # Rank: score first; superseded nodes sink if we prefer newest.
     def sort_key(sn: ScoredNode) -> tuple[float, float]:
         penalty = 0.4 if (prefer_newest and sn.superseded) else 1.0
-        return (sn.score * penalty, sn.node.confidence)
+        base = sn.rank_score if sim_rerank > 0.0 else sn.score
+        return (base * penalty, sn.node.confidence)
 
     scored.sort(key=sort_key, reverse=True)
 
@@ -145,10 +163,12 @@ def _find_seeds(
     *,
     embed: EmbedFn,
     max_seeds: int,
+    qvec: "np.ndarray | None" = None,
 ) -> dict[str, float]:
     """Blend semantic (embedding) and lexical (FTS) seed discovery."""
     seeds: dict[str, float] = {}
-    qvec = embed(query)
+    if qvec is None:
+        qvec = embed(query)
     for nid, sim in store.semantic_search(qvec, top_k=max_seeds):
         if sim > 0:
             seeds[nid] = max(seeds.get(nid, 0.0), sim)
@@ -156,6 +176,36 @@ def _find_seeds(
     for nid in store.fts_search(query, limit=max_seeds):
         seeds[nid] = max(seeds.get(nid, 0.0), 0.6)
     return seeds
+
+
+def _apply_sim_rerank(
+    store: SqliteStore,
+    scored: list[ScoredNode],
+    qvec: "np.ndarray",
+    *,
+    weight: float,
+) -> None:
+    """Blend each node's activation score with its direct query similarity.
+
+    Activation scores are normalised to ``[0, 1]`` (relative to the strongest
+    node in this recall) so they combine sensibly with cosine similarity, which
+    already lives in ``[-1, 1]``. ``rank_score`` becomes
+    ``(1-weight)*norm_activation + weight*sim`` and is what the caller sorts on.
+    """
+    mat, ids = store.embedding_matrix()
+    idx = {nid: i for i, nid in enumerate(ids)}
+    qn = _l2(np.asarray(qvec, dtype=np.float32))
+    max_score = max((sn.score for sn in scored), default=0.0) or 1.0
+    for sn in scored:
+        i = idx.get(sn.node.id)
+        sn.sim = float(mat[i] @ qn) if i is not None and mat.size else 0.0
+        norm_act = sn.score / max_score
+        sn.rank_score = (1.0 - weight) * norm_act + weight * max(sn.sim, 0.0)
+
+
+def _l2(vec: "np.ndarray") -> "np.ndarray":
+    norm = float(np.linalg.norm(vec))
+    return vec / norm if norm else vec
 
 
 def _annotate_supersession(store: SqliteStore, by_id: dict[str, ScoredNode]) -> None:

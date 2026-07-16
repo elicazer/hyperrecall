@@ -1,0 +1,75 @@
+Pilot: conv-26  Caroline/Melanie  19 sessions  419 turns  199 QAs
+  progress: 25/419  ok=25 fail=0  0.4 turns/s  eta=894s
+  progress: 50/419  ok=50 fail=0  0.5 turns/s  eta=737s
+  ✗ [D4:10] gave up after 3 tries: Extra data: line 2 column 1 (char 454)
+  ✗ [D4:13] gave up after 3 tries: Extra data: line 2 column 1 (char 937)
+  progress: 75/419  ok=73 fail=2  0.5 turns/s  eta=736s
+  ✗ [D6:4] gave up after 3 tries: Extra data: line 2 column 1 (char 540)
+  progress: 100/419  ok=97 fail=3  0.5 turns/s  eta=693s
+  progress: 125/419  ok=122 fail=3  0.5 turns/s  eta=608s
+  ✗ [D8:7] gave up after 3 tries: Extra data: line 2 column 1 (char 789)
+  ✗ [D8:9] gave up after 3 tries: Extra data: line 2 column 1 (char 771)
+  progress: 150/419  ok=145 fail=5  0.5 turns/s  eta=583s
+  progress: 175/419  ok=170 fail=5  0.5 turns/s  eta=504s
+  progress: 200/419  ok=195 fail=5  0.5 turns/s  eta=450s
+  progress: 225/419  ok=220 fail=5  0.5 turns/s  eta=386s
+  progress: 250/419  ok=245 fail=5  0.5 turns/s  eta=331s
+  ✗ [D13:3] gave up after 3 tries: Extra data: line 2 column 1 (char 761)
+  ✗ [D13:13] gave up after 3 tries: Extra data: line 2 column 1 (char 757)
+  progress: 275/419  ok=268 fail=7  0.5 turns/s  eta=298s
+  ✗ [D14:27] gave up after 3 tries: Extra data: line 2 column 1 (char 669)
+  progress: 300/419  ok=292 fail=8  0.5 turns/s  eta=244s
+  ✗ [D14:30] gave up after 3 tries: Extra data: line 2 column 1 (char 650)
+  progress: 325/419  ok=316 fail=9  0.5 turns/s  eta=195s
+  ✗ [D16:2] gave up after 3 tries: Extra data: line 2 column 1 (char 1049)
+  ✗ [D16:9] gave up after 3 tries: Extra data: line 1 column 1060 (char 1059)
+  ✗ [D16:16] gave up after 3 tries: Extra data: line 2 column 1 (char 736)
+  ✗ [D17:4] gave up after 3 tries: Extra data: line 2 column 1 (char 700)
+  ✗ [D17:8] gave up after 3 tries: Extra data: line 1 column 1021 (char 1020)
+  ✗ [D17:13] gave up after 3 tries: Extra data: line 2 column 1 (char 1033)
+  progress: 375/419  ok=360 fail=15  0.4 turns/s  eta=99s
+  ✗ [D18:3] gave up after 3 tries: Extra data: line 2 column 1 (char 751)
+  progress: 400/419  ok=384 fail=16  0.4 turns/s  eta=43s
+
+=== INGEST ===
+{
+  "sample_id": "conv-26",
+  "n_total": 419,
+  "n_ok": 403,
+  "n_fail": 16,
+  "elapsed_s": 930.9
+}
+
+=== GRAPH ===
+{
+  "nodes": 2146,
+  "hyperedges": 403,
+  "members": 2146,
+  "avg_arity": 5.33,
+  "orphan_nodes": 0,
+  "edge_types": {
+    "Observation": 107,
+    "Question": 93,
+    "Emotion": 64,
+    "Intention": 37,
+    "Achievement": 22,
+    "Preference": 21,
+    "SharedActivity": 17,
+    "SmallTalk": 14,
+    "StateChange": 13,
+    "Event": 8,
+    "Advice": 3,
+    "Problem": 2,
+    "Relationship": 2
+  },
+  "node_kinds": {
+    "person": 752,
+    "concept": 665,
+    "fact": 403,
+    "other": 162,
+    "event": 93,
+    "entity": 42,
+    "place": 28,
+    "project": 1
+  }
+}

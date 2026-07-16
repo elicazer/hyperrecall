@@ -164,8 +164,10 @@ class Mesh:
         *,
         budget_tokens: int | None = None,
         k_hops: int = 2,
+        max_seeds: int = 5,
         prefer_newest: bool = True,
         reinforce_on_access: bool = True,
+        sim_rerank: float = 0.0,
     ) -> Subgraph:
         """Retrieve a connected subgraph of memories relevant to ``query``."""
         return recall(
@@ -174,8 +176,10 @@ class Mesh:
             embed=self.embed,
             budget_tokens=budget_tokens,
             k_hops=k_hops,
+            max_seeds=max_seeds,
             prefer_newest=prefer_newest,
             reinforce_on_access=reinforce_on_access,
+            sim_rerank=sim_rerank,
             curve=self.curve,
         )
 

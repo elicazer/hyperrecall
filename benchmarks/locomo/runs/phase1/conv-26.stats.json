@@ -1,0 +1,44 @@
+{
+  "ingest": {
+    "sample_id": "conv-26",
+    "n_total": 419,
+    "n_ok": 403,
+    "n_fail": 16,
+    "elapsed_s": 930.9
+  },
+  "graph": {
+    "nodes": 2146,
+    "hyperedges": 403,
+    "members": 2146,
+    "avg_arity": 5.33,
+    "orphan_nodes": 0,
+    "edge_types": {
+      "Observation": 107,
+      "Question": 93,
+      "Emotion": 64,
+      "Intention": 37,
+      "Achievement": 22,
+      "Preference": 21,
+      "SharedActivity": 17,
+      "SmallTalk": 14,
+      "StateChange": 13,
+      "Event": 8,
+      "Advice": 3,
+      "Problem": 2,
+      "Relationship": 2
+    },
+    "node_kinds": {
+      "person": 752,
+      "concept": 665,
+      "fact": 403,
+      "other": 162,
+      "event": 93,
+      "entity": 42,
+      "place": 28,
+      "project": 1
+    }
+  },
+  "coerced_types": {},
+  "coerced_total": 0,
+  "model": "gemini-2.5-flash"
+}
