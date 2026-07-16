@@ -1,36 +1,25 @@
 """Extractor v2 — dense, coreference-aware, 3-pass ingestion.
 
-The v0 extractor asked one LLM prompt per turn and emitted a *single* hyperedge.
-On LoCoMo conv-26 that starves the hypergraph: it misses most facts and never
-canonicalizes entities across turns, so "Caroline" in turn 3 and "Caroline" in
-turn 200 become two disconnected nodes. Mem0/Zep beat us because their
-extractors are *dense* (many facts per turn) and *canonicalized* (one entity ->
-one id, forever).
+The v0 extractor asked one LLM prompt per turn and emitted a *single* hyperedge,
+never canonicalizing entities across turns — so "Caroline" in turn 3 and turn
+200 became disconnected nodes. That starves the hypergraph. Mem0/Zep win by
+being *dense* (many facts per turn) and *canonicalized* (one entity -> one id).
 
-v2 fixes both with a three-pass pipeline, all backed by **Gemini 2.5 Pro** via
-Google's ``google.genai`` SDK (``GEMINI_API_KEY``). No Bedrock, no AWS.
+v2 fixes both with a three-pass pipeline backed by **Gemini 2.5 Pro** via
+Google's ``google.genai`` SDK (``GEMINI_API_KEY``); no Bedrock/AWS:
 
-Pass 1 — Entity extraction
-    One Gemini call returns *all* entities in a turn, each typed
-    (Person/Project/Decision/Event/Place/Time/Artifact/Belief/Preference) with a
-    short canonical name and a one-line description.
+- **Pass 1 — entities:** one call returns all typed entities in a turn
+  (Person/Project/Decision/Event/Place/Time/Artifact/Belief/Preference), each
+  with a canonical name + one-line description.
+- **Pass 2 — relations:** conditioned on those entities, a second call emits
+  typed N-ary hyperedges (fixed vocab), each with roled participants, optional
+  timestamp, and a one-line summary. 3-10 per substantive turn.
+- **Pass 3 — canonicalization:** each entity is matched against the mesh
+  (normalized name, then embedding similarity); a match reuses the existing node
+  id (coreference across turns). Every merge is logged.
 
-Pass 2 — Relation extraction
-    Given those entities + the turn text, a second Gemini call emits a list of
-    typed N-ary hyperedges. Each hyperedge has a type from a fixed vocabulary,
-    participants with roles, an optional timestamp, and a one-line summary.
-
-Pass 3 — Canonicalization
-    Each newly-extracted entity is checked against entities already in the mesh
-    (normalized-name match first, embedding similarity second). A match reuses
-    the existing node id — coreference across turns. Every merge decision is
-    logged so we can debug the graph.
-
-One turn typically yields 3-10 hyperedges instead of 1.
-
-Run ``python -m meshmind.ingest.extractor_v2 --demo`` for a live demo. In
-``mock_mode`` (or with no API key) a deterministic, network-free heuristic is
-used so tests and offline demos never touch the network.
+``python -m meshmind.ingest.extractor_v2 --demo`` runs it live. ``mock_mode``
+(or no API key) uses a deterministic offline heuristic — tests never hit the net.
 """
 
 from __future__ import annotations
