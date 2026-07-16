@@ -1,5 +1,6 @@
 """Phase 3: judge Phase 2 outputs (auto metrics + Gemini 2.5 Pro LLM-judge)."""
 from __future__ import annotations
+import argparse
 import json, math, os, re, sys, time
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -18,9 +19,15 @@ if env_file.exists():
 from google import genai
 from google.genai import types
 
-CONV_ID = "conv-26"
-IN_DIR = ROOT / "runs" / "phase2"
-OUT_DIR = ROOT / "runs" / "phase3"
+_ap = argparse.ArgumentParser()
+_ap.add_argument("--in-dir", default=str(ROOT / "runs" / "phase2"), help="directory containing phase2 .jsonl outputs")
+_ap.add_argument("--out-dir", default=str(ROOT / "runs" / "phase3"), help="directory for judged outputs + summary.json")
+_ap.add_argument("--conv", default="conv-26")
+_args, _ = _ap.parse_known_args()
+
+CONV_ID = _args.conv
+IN_DIR = Path(_args.in_dir)
+OUT_DIR = Path(_args.out_dir)
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 JUDGE_MODEL = "gemini-2.5-flash"
 CATEGORY_NAMES = {1: "single-hop", 2: "multi-hop", 3: "temporal", 4: "open-domain", 5: "adversarial"}

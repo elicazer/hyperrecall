@@ -32,13 +32,20 @@ sys.path.insert(0, str(ROOT.parents[1] / "src"))
 from meshmind.storage import embeddings as emb  # noqa: E402
 
 CONV_ID = "conv-26"
-SRC = ROOT / "runs" / "phase1" / f"{CONV_ID}.sqlite"
-DST = ROOT / "runs" / "phase1" / f"{CONV_ID}.embed.sqlite"
+DEFAULT_SRC = ROOT / "runs" / "phase1" / f"{CONV_ID}.sqlite"
+DEFAULT_DST = ROOT / "runs" / "phase1" / f"{CONV_ID}.embed.sqlite"
 EMBEDDER_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 BATCH = 256
 
 
 def main() -> int:
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--src", default=str(DEFAULT_SRC), help="source .sqlite mesh")
+    ap.add_argument("--dst", default=None, help="destination .embed.sqlite (default: <src>.embed.sqlite)")
+    args = ap.parse_args()
+    SRC = Path(args.src)
+    DST = Path(args.dst) if args.dst else SRC.with_suffix(".embed.sqlite")
     if not SRC.exists():
         print(f"source mesh not found: {SRC}", file=sys.stderr)
         return 2
