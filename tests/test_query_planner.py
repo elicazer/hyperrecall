@@ -30,7 +30,7 @@ def _memory_mesh() -> tuple[Mesh, Node, Node, Node]:
 
 def test_classification_all_five_classes_offline():
     mesh, *_ = _memory_mesh()
-    planner = QueryPlanner(mesh.store, embed=mesh.embed, llm=None)
+    planner = QueryPlanner(mesh.store, embed=mesh.embed, llm=None, use_gemini=False)
     cases = {
         "What does Eli remember?": "single_hop",
         "Why did the move happen and then affect work?": "multi_hop",
@@ -56,7 +56,7 @@ def test_gemini_json_classification_and_multihop_decomposition():
 
 def test_entity_retrieval_materializes_edge_records():
     mesh, _, _, new = _memory_mesh()
-    planner = QueryPlanner(mesh.store, embed=mesh.embed, llm=None)
+    planner = QueryPlanner(mesh.store, embed=mesh.embed, llm=None, use_gemini=False)
     result = planner.recall("What does Eli remember?", reinforce_on_access=False)
     assert result.plan.question_class == "single_hop"
     assert result.results
@@ -66,7 +66,7 @@ def test_entity_retrieval_materializes_edge_records():
 
 def test_superseded_contradiction_keeps_newest_unless_history_requested():
     mesh, _, old, new = _memory_mesh()
-    planner = QueryPlanner(mesh.store, embed=mesh.embed, llm=None)
+    planner = QueryPlanner(mesh.store, embed=mesh.embed, llm=None, use_gemini=False)
     current = planner.recall("What does Eli remember?", reinforce_on_access=False)
     assert new.id in current.node_ids()
     assert old.id not in current.node_ids()
@@ -90,7 +90,8 @@ def test_temporal_before_filter():
     assert all(row.timestamp < 31_536_000 for row in result.results)
 
 
-def test_public_api_opt_in_and_unknown_plan():
+def test_public_api_opt_in_and_unknown_plan(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     mesh, *_ = _memory_mesh()
     result = mesh.recall("What does Eli remember?", plan="v2", reinforce_on_access=False)
     assert result.plan is not None

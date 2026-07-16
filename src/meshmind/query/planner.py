@@ -171,6 +171,7 @@ class QueryPlanner:
         embed: EmbedFn = hash_embed,
         curve: DecayFn = exponential_decay,
         llm: LLMCallable | None = None,
+        use_gemini: bool = True,
         allow_heuristic_fallback: bool = True,
     ) -> None:
         self.store = store
@@ -179,7 +180,7 @@ class QueryPlanner:
         self.allow_heuristic_fallback = allow_heuristic_fallback
         if llm is not None:
             self.llm = llm
-        elif os.environ.get("GEMINI_API_KEY"):
+        elif use_gemini and os.environ.get("GEMINI_API_KEY"):
             try:
                 self.llm = GeminiPlannerClient()
             except RuntimeError:
@@ -532,7 +533,7 @@ def _demo() -> int:
         "open_domain": "Summarize the remembered tools",
         "adversarial": "What is the current president's stock price?",
     }
-    planner = QueryPlanner(mesh.store, embed=mesh.embed, llm=None)
+    planner = QueryPlanner(mesh.store, embed=mesh.embed, llm=None, use_gemini=False)
     for expected, question in examples.items():
         result = planner.recall(question, reinforce_on_access=False)
         print(f"{expected:12} -> {result.plan.question_class:12} | {len(result.results)} edges")

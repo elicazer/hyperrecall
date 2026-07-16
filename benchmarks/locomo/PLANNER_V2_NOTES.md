@@ -50,3 +50,18 @@ pytest -q
 ```
 
 The demo builds an in-memory mock graph and exercises all five routing classes.
+
+## conv-26 result
+
+The full 199-question retrieval and answer run completed without crashes or
+`ANSWER_ERROR` rows. Automatic metrics improved overall F1 from `0.127` to
+`0.254` (`+0.127`) and BLEU-1 from `0.106` to `0.222` (`+0.116`). The largest
+F1 gains were multi-hop (`+0.386`), single-hop (`+0.117`), and open-domain
+(`+0.105`). Token metrics remain uninformative for temporal and adversarial
+answers in this harness (both baseline and v2 are zero).
+
+Gemini 2.5 Pro judging was attempted, but the project-wide daily Pro request
+quota was already exhausted (HTTP 429, reset approximately six hours later).
+No Flash or alternate-provider fallback was used. Consequently
+`runs/planner_v2/summary.json` records the valid automatic metrics and marks the
+LLM-judge fields unavailable instead of treating judge errors as wrong answers.
