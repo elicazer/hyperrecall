@@ -26,7 +26,7 @@ from meshmind import Mesh  # noqa: E402
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--planner", choices=("legacy", "v2"), default="legacy",
+        "--planner", choices=("legacy", "v2", "v2-moat"), default="legacy",
         help="query-time retrieval planner (default: legacy merged retrieval)",
     )
     args = parser.parse_args(argv)
@@ -53,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
     def retrieve_v2(question: str) -> tuple[str, dict[str, object]]:
         result = mesh.recall(
             question,
-            plan="v2",
+            plan=args.planner,
             budget_tokens=None,
             k_hops=2,
             max_seeds=P.MESH_MAX_SEEDS,
@@ -62,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         plan = result.plan
         return result.to_context_string() or "(no relevant memory found)", {
-            "path": "planner-v2",
+            "path": f"planner-{args.planner}",
             "question_class": plan.question_class,
             "question_kind": plan.question_kind,
             "entities": list(plan.entities),
@@ -75,7 +75,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.planner == "v2":
         P.OUT_DIR = P.ROOT / "runs" / "planner_v2"
         P.OUT_DIR.mkdir(parents=True, exist_ok=True)
-    retrieve = retrieve_v2 if args.planner == "v2" else dispatcher.retrieve
+    elif args.planner == "v2-moat":
+        P.OUT_DIR = P.ROOT / "runs" / "moat_v1"
+        P.OUT_DIR.mkdir(parents=True, exist_ok=True)
+    retrieve = retrieve_v2 if args.planner in {"v2", "v2-moat"} else dispatcher.retrieve
     out = P.run_system(
         "meshmind", conv, client, retrieve,
         limit=limit, prompt_fn=dispatcher.prompt_for,

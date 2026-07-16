@@ -66,6 +66,8 @@ from meshmind import Mesh
 from harness.load import Conversation, load
 
 MODEL = "gemini-2.5-flash"
+# ``run_mesh_phase2.py`` threads its ``--planner`` choice into ``Mesh.recall``;
+# the moat run persists beside the other phase-2 outputs at ``runs/moat_v1``.
 CONV_ID = "conv-26"
 # Prefer the MiniLM-embedded mesh (see backfill_embeddings.py) so MeshMind seeds
 # from the *same* semantic space as the vector-RAG baseline; fall back to the

@@ -74,7 +74,7 @@ HYPEREDGE_VOCAB = (
     "TemporalOrder",
 )
 
-DEFAULT_MODEL = "gemini-2.5-pro"
+DEFAULT_MODEL = "gemini-2.5-flash"
 
 
 # --------------------------------------------------------------------------- #
@@ -202,6 +202,10 @@ _PASS2_SYSTEM = (
     "'yesterday' or 'last year' — always compute the calendar date.\n"
     "Similarly, put the resolved date into the summary sentence (e.g. "
     "'Caroline attended an LGBTQ support group on 2023-05-07').\n"
+    "If this turn contradicts or supersedes an earlier statement (e.g. "
+    "'actually I no longer like X', 'I changed my mind about X'), emit a "
+    "`Contradiction` or `Supersession` hyperedge in addition to any "
+    "Statement/Preference edge.\n"
     "Do NOT invent entities that were not provided. Pick the single best type "
     "per relation; use 'Statement' if nothing else fits."
 )

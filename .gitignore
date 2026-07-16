@@ -33,4 +33,5 @@ mesh_export/
 benchmarks/locomo/repo/
 benchmarks/locomo/runs/**/*.sqlite
 benchmarks/locomo/runs/**/*.sqlite-*
+benchmarks/locomo/runs/**/*.jsonl
 benchmarks/locomo/**/__pycache__/
