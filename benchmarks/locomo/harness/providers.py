@@ -14,6 +14,7 @@ PRICES = {
     "openai:gpt-4o": (2.50, 10.00),
     "openai:gpt-4o-mini": (0.15, 0.60),
     "gemini:gemini-2.5-flash": (0.30, 2.50),
+    "gemini:gemini-2.5-pro": (1.25, 10.00),
 }
 
 
@@ -42,7 +43,7 @@ class ModelClient:
         self.usage = Usage()
         if self.provider == "gemini":
             from google import genai
-            key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+            key = os.environ.get("GEMINI_API_KEY")
             if not key:
                 raise RuntimeError("GEMINI_API_KEY is required")
             self.client = genai.Client(api_key=key)
@@ -74,10 +75,11 @@ class ModelClient:
 
     def _gemini(self, prompt: str, schema: dict[str, Any] | None) -> str:
         from google.genai import types
+        thinking_budget = 128 if "2.5-pro" in self.model else 0
         config: dict[str, Any] = {
             "temperature": 0.0,
-            "max_output_tokens": 200,
-            "thinking_config": types.ThinkingConfig(thinking_budget=0),
+            "max_output_tokens": 512 if thinking_budget else 200,
+            "thinking_config": types.ThinkingConfig(thinking_budget=thinking_budget),
         }
         if schema:
             config.update(response_mime_type="application/json", response_schema=schema)

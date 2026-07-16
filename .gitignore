@@ -34,3 +34,4 @@ benchmarks/locomo/repo/
 benchmarks/locomo/runs/**/*.sqlite
 benchmarks/locomo/runs/**/*.sqlite-*
 benchmarks/locomo/**/__pycache__/
+benchmarks/locomo/runs/multi/
