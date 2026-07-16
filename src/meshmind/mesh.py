@@ -14,7 +14,7 @@ retrieval layers together behind an ergonomic surface::
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 
@@ -189,8 +189,23 @@ class Mesh:
         prefer_newest: bool = True,
         reinforce_on_access: bool = True,
         sim_rerank: float = 0.0,
+        plan: Literal["v2"] | None = None,
     ) -> Subgraph:
         """Retrieve a connected subgraph of memories relevant to ``query``."""
+        if plan == "v2":
+            from .query.planner import QueryPlanner
+
+            return QueryPlanner(self.store, embed=self.embed, curve=self.curve).recall(
+                query,
+                budget_tokens=budget_tokens,
+                k_hops=k_hops,
+                max_seeds=max_seeds,
+                prefer_newest=prefer_newest,
+                reinforce_on_access=reinforce_on_access,
+                sim_rerank=sim_rerank,
+            )
+        if plan is not None:
+            raise ValueError(f"unknown recall plan: {plan!r}")
         return recall(
             self.store,
             query,

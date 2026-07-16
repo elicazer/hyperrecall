@@ -1,0 +1,17 @@
+{
+  "system": "meshmind-planner-v2",
+  "n_total": 199,
+  "llm_judge": {
+    "model": "gemini-2.5-pro",
+    "status": "unavailable",
+    "reason": "daily request quota exhausted (HTTP 429); no Flash/provider fallback used"
+  },
+  "by_category": {
+    "1": {"name": "single-hop", "n": 32, "avg_f1": 0.19, "avg_bleu1": 0.135, "baseline_avg_f1": 0.073, "delta_avg_f1": 0.117, "baseline_avg_bleu1": 0.05, "delta_avg_bleu1": 0.085},
+    "2": {"name": "multi-hop", "n": 37, "avg_f1": 0.465, "avg_bleu1": 0.398, "baseline_avg_f1": 0.079, "delta_avg_f1": 0.386, "baseline_avg_bleu1": 0.034, "delta_avg_bleu1": 0.364},
+    "3": {"name": "temporal", "n": 13, "avg_f1": 0.0, "avg_bleu1": 0.0, "baseline_avg_f1": 0.0, "delta_avg_f1": 0.0, "baseline_avg_bleu1": 0.0, "delta_avg_bleu1": 0.0},
+    "4": {"name": "open-domain", "n": 70, "avg_f1": 0.39, "avg_bleu1": 0.358, "baseline_avg_f1": 0.285, "delta_avg_f1": 0.105, "baseline_avg_bleu1": 0.26, "delta_avg_bleu1": 0.098},
+    "5": {"name": "adversarial", "n": 47, "avg_f1": 0.0, "avg_bleu1": 0.0, "baseline_avg_f1": 0.0, "delta_avg_f1": 0.0, "baseline_avg_bleu1": 0.0, "delta_avg_bleu1": 0.0}
+  },
+  "overall": {"avg_f1": 0.254, "avg_bleu1": 0.222, "baseline_avg_f1": 0.127, "delta_avg_f1": 0.127, "baseline_avg_bleu1": 0.106, "delta_avg_bleu1": 0.116}
+}
