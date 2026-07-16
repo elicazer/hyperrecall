@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from meshmind import Hyperedge, HyperedgeMember, Mesh, Node
-from meshmind.query.planner import QueryPlanner
+from meshmind.query.planner import QueryPlan, QueryPlanner
+import meshmind.query.planner as planner_module
 
 
 def _memory_mesh() -> tuple[Mesh, Node, Node, Node]:
@@ -101,3 +102,70 @@ def test_public_api_opt_in_and_unknown_plan(monkeypatch):
         assert "unknown recall plan" in str(exc)
     else:
         raise AssertionError("unknown plan must fail loudly")
+
+
+def test_chain_conditions_next_retrieval_and_exposes_reasoning(monkeypatch):
+    mesh, *_ = _memory_mesh()
+    calls: list[str] = []
+    answers = iter(["Newport", "Irvine"])
+
+    def fake_llm(prompt: str):
+        if prompt.startswith("Classify"):
+            return {"question_class": "multi_hop", "entities": ["Eli"],
+                    "time_constraints": [], "question_kind": "causal"}
+        if prompt.startswith("Decompose"):
+            return {"sub_questions": ["Where did Eli live first?", "Where next?"]}
+        return {"answer": next(answers)}
+
+    real_recall = planner_module.legacy_recall
+
+    def recording_recall(store, query, **kwargs):
+        calls.append(query)
+        return real_recall(store, query, **kwargs)
+
+    monkeypatch.setattr(planner_module, "legacy_recall", recording_recall)
+    planner = QueryPlanner(mesh.store, embed=mesh.embed, llm=fake_llm)
+    result = planner.chain_execute("How did Eli move?", reinforce_on_access=False)
+
+    assert calls[0] == "Where did Eli live first?"
+    assert "You already learned: Newport" in calls[1]
+    assert result.explanation.startswith("Reasoning steps: 1)")
+    assert "2) Where next? -> Irvine" in result.to_context_string()
+    assert all(len(result.hyperedges) <= 16 for _ in [0])
+
+
+def test_chain_keeps_unknown_step_and_allows_final_override():
+    mesh, *_ = _memory_mesh()
+
+    def fake_llm(prompt: str):
+        if prompt.startswith("Classify"):
+            return {"question_class": "multi_hop", "entities": [],
+                    "time_constraints": [], "question_kind": "causal"}
+        if prompt.startswith("Decompose"):
+            return {"sub_questions": ["Unknown first step?", "Where did Eli live?"]}
+        return {"answer": "I don't know." if "Unknown first" in prompt else "Irvine"}
+
+    result = QueryPlanner(mesh.store, embed=mesh.embed, llm=fake_llm).chain_execute(
+        "Why did this happen?", reinforce_on_access=False
+    )
+    assert "I don't know." in result.explanation
+    assert "may override" in result.explanation
+
+
+def test_chain_with_no_subquestions_falls_back_to_plain_v2():
+    mesh, *_ = _memory_mesh()
+
+    def fake_llm(prompt: str):
+        if prompt.startswith("Classify"):
+            return {"question_class": "multi_hop", "entities": [],
+                    "time_constraints": [], "question_kind": "fact"}
+        return {"sub_questions": []}
+
+    planner = QueryPlanner(mesh.store, embed=mesh.embed, llm=fake_llm)
+    planner.decompose = lambda question, plan: QueryPlan(  # type: ignore[method-assign]
+        "multi_hop", question_kind="fact", sub_questions=()
+    )
+    result = planner.chain_execute("Opaque memory query", reinforce_on_access=False)
+    assert result.plan.question_class == "multi_hop"
+    assert result.plan.sub_questions == ()
+    assert result.explanation == ""

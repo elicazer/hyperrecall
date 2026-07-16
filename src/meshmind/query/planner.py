@@ -103,10 +103,12 @@ class PlannedRecall(Subgraph):
 
     plan: QueryPlan | None = None
     results: list[EdgeResult] = field(default_factory=list)
+    explanation: str = ""
 
     def to_context_string(self) -> str:
         if not self.results:
-            return super().to_context_string()
+            context = super().to_context_string()
+            return "\n\n".join(x for x in (self.explanation, context) if x)
         lines: list[str] = []
         for result in self.results:
             stamp = _format_timestamp(result.timestamp)
@@ -124,7 +126,8 @@ class PlannedRecall(Subgraph):
             lines.append(f"{prefix} {rendered}".strip())
             if relation:
                 lines.append(f"  Relation [{result.edge.type}]: {relation}")
-        return "\n".join(lines)
+        context = "\n".join(lines)
+        return "\n\n".join(x for x in (self.explanation, context) if x)
 
 
 LLMCallable = Callable[[str], str | dict[str, Any]]
@@ -133,7 +136,7 @@ LLMCallable = Callable[[str], str | dict[str, Any]]
 class GeminiPlannerClient:
     """Small ``google-generativeai`` adapter with exponential backoff."""
 
-    def __init__(self, api_key: str | None = None, model: str = "gemini-2.5-pro") -> None:
+    def __init__(self, api_key: str | None = None, model: str = "gemini-2.5-flash") -> None:
         key = api_key or os.environ.get("GEMINI_API_KEY")
         if not key:
             raise RuntimeError("GEMINI_API_KEY is required for Gemini query planning")
@@ -271,6 +274,107 @@ class QueryPlanner:
         return PlannedRecall(
             query=question, nodes=subgraph.nodes, hyperedges=subgraph.hyperedges,
             plan=plan, results=results,
+        )
+
+    def chain_execute(
+        self,
+        question: str,
+        *,
+        budget_tokens: int | None = None,
+        k_hops: int = 2,
+        max_seeds: int = 5,
+        prefer_newest: bool = True,
+        reinforce_on_access: bool = True,
+        sim_rerank: float = 0.0,
+    ) -> PlannedRecall:
+        """Execute multi-hop sub-questions sequentially, conditioning retrieval."""
+        plan = self.decompose(question, self.classify(question))
+        if plan.question_class != "multi_hop" or not plan.sub_questions:
+            return self.recall(
+                question, budget_tokens=budget_tokens, k_hops=k_hops,
+                max_seeds=max_seeds, prefer_newest=prefer_newest,
+                reinforce_on_access=reinforce_on_access, sim_rerank=sim_rerank,
+            )
+
+        kwargs = dict(
+            embed=self.embed, budget_tokens=budget_tokens, k_hops=k_hops,
+            max_seeds=max_seeds, prefer_newest=prefer_newest,
+            reinforce_on_access=reinforce_on_access, sim_rerank=sim_rerank,
+            curve=self.curve,
+        )
+        answers: list[str] = []
+        graphs: list[Subgraph] = []
+        for sub_question in plan.sub_questions[:3]:
+            learned = " ".join(answers)
+            retrieval_query = sub_question
+            if learned:
+                retrieval_query = f"You already learned: {learned}. Now answer: {sub_question}"
+            graph = self._cap_edges(legacy_recall(self.store, retrieval_query, **kwargs), 8)
+            graphs.append(graph)
+            context = self._context_for_graph(graph)
+            answers.append(self._answer_sub_question(sub_question, context, learned))
+
+        combined = self._merge_graphs(question, graphs)
+        keep_history = bool(_OLD_BELIEF.search(question))
+        combined = self._post_filter(combined, keep_history=keep_history)
+        results = self._assemble(combined, keep_history=keep_history)
+        reasoning = "Reasoning steps: " + " ".join(
+            f"{i}) {sub} -> {answer}"
+            for i, (sub, answer) in enumerate(zip(plan.sub_questions, answers), 1)
+        )
+        if any(_is_unknown(answer) for answer in answers):
+            reasoning += (
+                " The final answerer may override any I don't know step using the full "
+                "memory context below."
+            )
+        return PlannedRecall(
+            query=question, nodes=combined.nodes, hyperedges=combined.hyperedges,
+            plan=plan, results=results, explanation=reasoning,
+        )
+
+    def _answer_sub_question(self, question: str, context: str, learned: str) -> str:
+        if self.llm is None:
+            return "I don't know."
+        hint = f"You already learned: {learned}. Now answer this step.\n" if learned else ""
+        prompt = (
+            "Answer this atomic personal-memory question using only the supplied context. "
+            "Return JSON only: {\"answer\": \"concise answer\"}. If unsupported, use "
+            "{\"answer\": \"I don't know.\"}.\n" + hint
+            + f"Memory context:\n{context}\nQuestion: {question}"
+        )
+        try:
+            raw = _as_json(self.llm(prompt))
+            answer = str(raw.get("answer", "")).strip()
+            return answer or "I don't know."
+        except Exception:
+            if not self.allow_heuristic_fallback:
+                raise
+            return "I don't know."
+
+    def _context_for_graph(self, graph: Subgraph) -> str:
+        filtered = self._post_filter(graph, keep_history=False)
+        rendered = self._assemble(filtered, keep_history=False)
+        return PlannedRecall(graph.query, filtered.nodes, filtered.hyperedges, results=rendered).to_context_string()
+
+    @staticmethod
+    def _cap_edges(graph: Subgraph, maximum: int) -> Subgraph:
+        edges = graph.hyperedges[:maximum]
+        ids = {nid for edge in edges for nid in edge.node_ids}
+        return Subgraph(graph.query, [sn for sn in graph.nodes if sn.node.id in ids], edges)
+
+    @staticmethod
+    def _merge_graphs(question: str, graphs: Sequence[Subgraph]) -> Subgraph:
+        nodes: dict[str, ScoredNode] = {}
+        edges: dict[str, Hyperedge] = {}
+        for graph in graphs:
+            for scored in graph.nodes:
+                old = nodes.get(scored.node.id)
+                if old is None or scored.score > old.score:
+                    nodes[scored.node.id] = scored
+            edges.update((edge.id, edge) for edge in graph.hyperedges)
+        return Subgraph(
+            question, sorted(nodes.values(), key=lambda item: item.score, reverse=True),
+            list(edges.values()),
         )
 
     def _entity_recall(self, question: str, entities: Sequence[str], **kwargs: Any) -> Subgraph:
@@ -414,6 +518,10 @@ def _heuristic_plan(question: str) -> QueryPlan:
         cls = "open_domain"
     kind = "time" if cls == "temporal" else "why" if question.lower().startswith("why") else "fact"
     return QueryPlan(cls, entities, constraints, kind, used_llm=False)
+
+
+def _is_unknown(answer: str) -> bool:
+    return answer.strip().lower().rstrip(".") == "i don't know"
 
 
 def _plan_from_json(raw: dict[str, Any], question: str, *, used_llm: bool) -> QueryPlan:

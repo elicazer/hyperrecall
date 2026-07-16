@@ -26,7 +26,7 @@ from meshmind import Mesh  # noqa: E402
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--planner", choices=("legacy", "v2"), default="legacy",
+        "--planner", choices=("legacy", "v2", "v2-chain"), default="legacy",
         help="query-time retrieval planner (default: legacy merged retrieval)",
     )
     args = parser.parse_args(argv)
@@ -71,11 +71,40 @@ def main(argv: list[str] | None = None) -> int:
             "n_edges": len(result.results),
         }
 
+    def retrieve_v2_chain(question: str) -> tuple[str, dict[str, object]]:
+        result = mesh.recall(
+            question,
+            plan="v2-chain",
+            budget_tokens=None,
+            k_hops=2,
+            max_seeds=P.MESH_MAX_SEEDS,
+            sim_rerank=P.MESH_SIM_RERANK,
+            reinforce_on_access=False,
+        )
+        plan = result.plan
+        return result.to_context_string() or "(no relevant memory found)", {
+            "path": "planner-v2-chain",
+            "question_class": plan.question_class,
+            "question_kind": plan.question_kind,
+            "entities": list(plan.entities),
+            "sub_questions": list(plan.sub_questions),
+            "n_nodes": len(result.nodes),
+            "n_edges": len(result.results),
+            "explanation": result.explanation,
+        }
+
     limit = int(os.environ.get("PHASE2_LIMIT", "0")) or None
     if args.planner == "v2":
         P.OUT_DIR = P.ROOT / "runs" / "planner_v2"
         P.OUT_DIR.mkdir(parents=True, exist_ok=True)
-    retrieve = retrieve_v2 if args.planner == "v2" else dispatcher.retrieve
+    elif args.planner == "v2-chain":
+        P.OUT_DIR = P.ROOT / "runs" / "chain_v1"
+        P.OUT_DIR.mkdir(parents=True, exist_ok=True)
+    retrieve = {
+        "legacy": dispatcher.retrieve,
+        "v2": retrieve_v2,
+        "v2-chain": retrieve_v2_chain,
+    }[args.planner]
     out = P.run_system(
         "meshmind", conv, client, retrieve,
         limit=limit, prompt_fn=dispatcher.prompt_for,

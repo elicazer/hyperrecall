@@ -189,13 +189,15 @@ class Mesh:
         prefer_newest: bool = True,
         reinforce_on_access: bool = True,
         sim_rerank: float = 0.0,
-        plan: Literal["v2"] | None = None,
+        plan: Literal["v2", "v2-chain"] | None = None,
     ) -> Subgraph:
         """Retrieve a connected subgraph of memories relevant to ``query``."""
-        if plan == "v2":
+        if plan in {"v2", "v2-chain"}:
             from .query.planner import QueryPlanner
 
-            return QueryPlanner(self.store, embed=self.embed, curve=self.curve).recall(
+            planner = QueryPlanner(self.store, embed=self.embed, curve=self.curve)
+            method = planner.chain_execute if plan == "v2-chain" else planner.recall
+            return method(
                 query,
                 budget_tokens=budget_tokens,
                 k_hops=k_hops,
