@@ -89,8 +89,10 @@ class Mesh:
         provenance: dict[str, Any] | None = None,
         use_llm: bool | None = None,
         mock_mode: bool = False,
-        extractor: LLMExtractor | HeuristicExtractor | None = None,
-    ) -> ExtractedMemory:
+        extractor: LLMExtractor | HeuristicExtractor | str | None = None,
+        speaker: str | None = None,
+        when: str | None = None,
+    ) -> ExtractedMemory | Any:
         """Ingest raw natural-language text with the LLM extractor.
 
         Unlike :meth:`remember` (which expects you to name participants), this
@@ -99,10 +101,29 @@ class Mesh:
         Bedrock key is configured it transparently falls back to the
         deterministic :class:`HeuristicExtractor`.
 
+        Pass ``extractor="v2"`` (or an :class:`~meshmind.ingest.extractor_v2.ExtractorV2`
+        instance) to use the dense, coreference-aware 3-pass pipeline; it
+        canonicalizes entities across turns and returns a ``TurnExtraction``.
+
         Pass ``mock_mode=True`` (or inject ``extractor``) to run offline. Returns
         the validated :class:`ExtractedMemory`; the created nodes and hyperedge
         are already persisted and recallable.
         """
+        # -- v2 pipeline (dense + coreference-aware) ------------------------
+        if extractor == "v2" or getattr(extractor, "backend", None) == "v2":
+            from .ingest.extractor_v2 import ExtractorV2
+
+            ev2 = extractor if isinstance(extractor, ExtractorV2) else ExtractorV2(mock_mode=mock_mode)
+            return ev2.ingest(
+                self,
+                text,
+                speaker=speaker,
+                when=when,
+                context=context,
+                confidence=confidence,
+                provenance=provenance,
+            )
+
         ext = extractor or choose_extractor(use_llm=use_llm, mock_mode=mock_mode)
         memory = ext.extract(
             text,
