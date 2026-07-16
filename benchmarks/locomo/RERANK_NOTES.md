@@ -94,6 +94,46 @@ rate-limited run still completes.
 
 ## Results (rerank_v1)
 
-_Pending — filled in after the scored run below._
+**Pipeline verified end-to-end; full scored comparison is quota-blocked.**
 
-<!-- RESULTS -->
+The `v2-rerank` path runs correctly against the real `phase1_v2` mesh. An early
+run produced real, reranked answers, e.g.:
+
+| question class | rerank applied | promoted into top-8 | answer |
+|----------------|----------------|---------------------|--------|
+| temporal       | yes            | —                   | `6 May 2023` |
+| single_hop     | yes            | 4                   | `Counseling, specifically with LGBTQ+ individuals` |
+
+Each row's `ctx_stats.rerank_*` shows candidates re-ordered by the Flash score
+(`applied=true`, `n_candidates=25`, and several edges `promoted_into_top_k` that
+plain retrieval order would have dropped).
+
+### Why the full 199-question run isn't scored here
+
+The only available Gemini key is **free-tier, limited to ~10 requests/minute**; a
+saturated window recovers only after ~60–75s idle. A scored `v2-rerank`
+comparison needs ~3 Gemini calls per question (classify + rerank + answer) plus a
+phase3 judge call — ~800 calls for conv-26. Under a 10 RPM ceiling that is ~80
+min of pure, perfectly-paced API time, and any burst stalls the run in 429
+backoff. Within this worker's time budget a completed 199-question scored
+`summary.json` was not reachable. The rerank/answer path was confirmed working;
+the blocker is external quota, not the code.
+
+### How to complete the comparison when quota allows
+
+```bash
+export MESH_EMBED_DB=.../runs/phase1_v2/conv-26.embed.sqlite   # same mesh as integration_v2
+export RERANK_SLEEP=14                                         # stay under ~7 RPM
+python benchmarks/locomo/run_mesh_phase2.py --planner v2-rerank
+python benchmarks/locomo/phase3_judge.py --in-dir runs/rerank_v1 --out-dir runs/rerank_v1
+# quota-light interim signal (no API): local token-F1/BLEU vs the baseline
+python benchmarks/locomo/rerank_compare.py \
+    runs/integration_v2/conv-26.meshmind.judged.jsonl \
+    runs/rerank_v1/conv-26.meshmind.jsonl
+```
+
+`rerank_compare.py` compares only the questions completed in *both* runs, so even
+a partial rerank run yields an apples-to-apples per-category F1 delta without
+spending any additional quota. The reranker's expected win is concentrated in
+category 1 (single-hop), where the baseline sits at acc 0.281 / F1 0.232 and the
+motivating failure mode (correct edge retrieved but out-ranked) lives.
