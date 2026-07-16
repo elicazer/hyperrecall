@@ -1,0 +1,33 @@
+[judge] meshmind
+  [meshmind] judged 20/199  1.5 q/s eta=119s
+  [meshmind] judged 40/199  1.49 q/s eta=106s
+  [meshmind] judged 60/199  1.47 q/s eta=94s
+  [meshmind] judged 80/199  1.47 q/s eta=80s
+  [meshmind] judged 100/199  1.48 q/s eta=66s
+  [meshmind] judged 120/199  1.49 q/s eta=52s
+  [meshmind] judged 140/199  1.51 q/s eta=39s
+  [meshmind] judged 160/199  1.51 q/s eta=25s
+  [meshmind] judged 180/199  1.5 q/s eta=12s
+  wrote /home/ubuntu/projects/meshmind/benchmarks/locomo/runs/phase3/conv-26.meshmind.judged.jsonl
+[judge] vector_rag
+  [vector_rag] judged 20/199  1.54 q/s eta=115s
+  [vector_rag] judged 40/199  1.51 q/s eta=105s
+  [vector_rag] judged 60/199  1.53 q/s eta=90s
+  [vector_rag] judged 80/199  1.53 q/s eta=77s
+  [vector_rag] judged 100/199  1.52 q/s eta=65s
+  [vector_rag] judged 120/199  1.53 q/s eta=51s
+  [vector_rag] judged 140/199  1.53 q/s eta=38s
+  [vector_rag] judged 160/199  1.53 q/s eta=25s
+  [vector_rag] judged 180/199  1.52 q/s eta=12s
+  wrote /home/ubuntu/projects/meshmind/benchmarks/locomo/runs/phase3/conv-26.vector_rag.judged.jsonl
+
+=== SUMMARY ===
+category                                          meshmind                            vector_rag
+1 single-hop        n=32  strict=0.156 lax=0.5 F1=0.148  n=32  strict=0.094 lax=0.406 F1=0.147
+2 multi-hop         n=37  strict=0.324 lax=0.676 F1=0.277  n=37  strict=0.054 lax=0.486 F1=0.034
+3 temporal          n=13  strict=0.385 lax=0.615 F1=0.0  n=13  strict=0.462 lax=0.692 F1=0.038
+4 open-domain       n=70  strict=0.514 lax=0.614 F1=0.344  n=70  strict=0.414 lax=0.6 F1=0.357
+5 adversarial       n=47  strict=0.83 lax=0.83 F1=0.0  n=47  strict=0.851 lax=0.851 F1=0.021
+----------------------------------------------------------------------------------------------------
+OVERALL meshmind        strict=0.487  lax=0.658  F1=0.196  BLEU1=0.16
+OVERALL vector_rag      strict=0.402  lax=0.613  F1=0.163  BLEU1=0.139

@@ -1,0 +1,42 @@
+{
+  "conv": "conv-26",
+  "turns_ingested": 8,
+  "ok": 8,
+  "fail": 0,
+  "elapsed_s": 160.5,
+  "total_hyperedges": 30,
+  "total_merges": 5,
+  "edges_per_turn": 3.75,
+  "graph": {
+    "nodes": 67,
+    "hyperedges": 30,
+    "members": 132,
+    "avg_arity": 4.4,
+    "entity_nodes": 29,
+    "distinct_entity_names": 28,
+    "edge_types": {
+      "Statement": 8,
+      "Question": 6,
+      "Action": 5,
+      "Ownership": 4,
+      "Preference": 3,
+      "Observation": 2,
+      "Decision": 1,
+      "Location": 1
+    },
+    "node_kinds": {
+      "statement": 30,
+      "fact": 8,
+      "belief": 6,
+      "preference": 4,
+      "person": 4,
+      "event": 4,
+      "project": 3,
+      "artifact": 3,
+      "time": 2,
+      "decision": 2,
+      "entity": 1
+    }
+  },
+  "mock": false
+}

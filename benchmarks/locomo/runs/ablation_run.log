@@ -1,0 +1,7 @@
+=== ABLATION: no_dates (MESH_NO_DATES=1) ===
+  done no_dates
+=== ABLATION: no_rerank (MESH_SIM_RERANK=0) ===
+  done no_rerank
+=== ABLATION: baretext (MESH_EMBED_DB=/home/ubuntu/projects/meshmind/benchmarks/locomo/runs/phase1/conv-26.baretext.sqlite) ===
+  done baretext
+ALL ABLATIONS DONE

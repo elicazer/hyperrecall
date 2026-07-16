@@ -30,3 +30,7 @@ mesh_export/
 .idea/
 .vscode/
 .DS_Store
+benchmarks/locomo/repo/
+benchmarks/locomo/runs/**/*.sqlite
+benchmarks/locomo/runs/**/*.sqlite-*
+benchmarks/locomo/**/__pycache__/

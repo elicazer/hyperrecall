@@ -19,7 +19,14 @@ from typing import Any
 import numpy as np
 
 from .decay import DecayFn, exponential_decay, get_curve
-from .ingest.extractor import Extraction, extract
+from .ingest.extractor import (
+    ExtractedMemory,
+    Extraction,
+    HeuristicExtractor,
+    LLMExtractor,
+    choose_extractor,
+    extract,
+)
 from .models import (
     CONTRADICTS,
     SUPERSEDES,
@@ -73,6 +80,65 @@ class Mesh:
         assert ex.primary is not None
         return ex.primary
 
+    def ingest_text(
+        self,
+        text: str,
+        *,
+        context: dict[str, Any] | None = None,
+        confidence: float = 1.0,
+        provenance: dict[str, Any] | None = None,
+        use_llm: bool | None = None,
+        mock_mode: bool = False,
+        extractor: LLMExtractor | HeuristicExtractor | str | None = None,
+        speaker: str | None = None,
+        when: str | None = None,
+    ) -> ExtractedMemory | Any:
+        """Ingest raw natural-language text with the LLM extractor.
+
+        Unlike :meth:`remember` (which expects you to name participants), this
+        uses the real LLM pipeline (:class:`LLMExtractor`) to decompose the text
+        into entities and one typed N-ary hyperedge, then persists them. When no
+        Bedrock key is configured it transparently falls back to the
+        deterministic :class:`HeuristicExtractor`.
+
+        Pass ``extractor="v2"`` (or an :class:`~meshmind.ingest.extractor_v2.ExtractorV2`
+        instance) to use the dense, coreference-aware 3-pass pipeline; it
+        canonicalizes entities across turns and returns a ``TurnExtraction``.
+
+        Pass ``mock_mode=True`` (or inject ``extractor``) to run offline. Returns
+        the validated :class:`ExtractedMemory`; the created nodes and hyperedge
+        are already persisted and recallable.
+        """
+        # -- v2 pipeline (dense + coreference-aware) ------------------------
+        if extractor == "v2" or getattr(extractor, "backend", None) == "v2":
+            from .ingest.extractor_v2 import ExtractorV2
+
+            ev2 = extractor if isinstance(extractor, ExtractorV2) else ExtractorV2(mock_mode=mock_mode)
+            return ev2.ingest(
+                self,
+                text,
+                speaker=speaker,
+                when=when,
+                context=context,
+                confidence=confidence,
+                provenance=provenance,
+            )
+
+        ext = extractor or choose_extractor(use_llm=use_llm, mock_mode=mock_mode)
+        memory = ext.extract(
+            text,
+            context=context,
+            confidence=confidence,
+            provenance=provenance,
+        )
+        ex = memory.to_extraction(
+            confidence=confidence if confidence != 1.0 else None,
+            context=context,
+            provenance=provenance,
+        )
+        self._persist(ex)
+        return memory
+
     def add_node(self, node: Node) -> Node:
         """Add a pre-built node (embeds its text automatically)."""
         return self.store.add_node(node, vector=self.embed(node.text))
@@ -119,8 +185,10 @@ class Mesh:
         *,
         budget_tokens: int | None = None,
         k_hops: int = 2,
+        max_seeds: int = 5,
         prefer_newest: bool = True,
         reinforce_on_access: bool = True,
+        sim_rerank: float = 0.0,
     ) -> Subgraph:
         """Retrieve a connected subgraph of memories relevant to ``query``."""
         return recall(
@@ -129,8 +197,10 @@ class Mesh:
             embed=self.embed,
             budget_tokens=budget_tokens,
             k_hops=k_hops,
+            max_seeds=max_seeds,
             prefer_newest=prefer_newest,
             reinforce_on_access=reinforce_on_access,
+            sim_rerank=sim_rerank,
             curve=self.curve,
         )
 

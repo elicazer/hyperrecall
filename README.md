@@ -17,9 +17,8 @@ other, and can be **superseded** by newer information. And the whole thing
 exports to a directory of plain Markdown files, so your agent's memory can move
 between tools.
 
-> ⚠️ **Pre-release (v0.0.1).** This is the reference implementation and the
-> substrate is real and tested end-to-end, but the ingestion pipeline is a
-> heuristic stub (LLM-based extraction is on the roadmap). Not on PyPI yet.
+> ⚠️ **Pre-release (v0.0.1).** This is the reference implementation; the
+> substrate is real and tested end-to-end. Not on PyPI yet.
 
 ---
 
@@ -49,8 +48,47 @@ Try the demos:
 python examples/hello_world.py         # ingest → recall → inspect, with decay
 python examples/contradiction_demo.py  # conflict detection
 python examples/portable_export.py     # export to Markdown and re-import
+python examples/real_ingest.py         # LLM extraction → hyperedge (Bedrock)
 meshmind demo                          # the CLI does the same
 ```
+
+---
+
+## Ingestion
+
+`remember(...)` is the low-level path: you hand it the text and name the
+participants. `ingest_text(...)` is the smart path: it uses an LLM to decompose
+a raw turn into atomic entities and one **typed N-ary hyperedge** — who did
+what, in which role, and when — with no manual annotation.
+
+```python
+from meshmind import Mesh
+
+mesh = Mesh(":memory:")
+mem = mesh.ingest_text(
+    "On July 13, Eli and David discussed the TEDx application and decided "
+    "to focus on the ShapeForge → Amazon narrative."
+)
+
+print(mem.hyperedge.type)          # "Decision"
+for p in mem.hyperedge.participants:
+    print(p.entity_name, p.role)   # Eli decider / David decider / TEDx topic / ...
+print(mem.hyperedge.timestamp)     # 2026-07-13T00:00:00+00:00
+```
+
+The extractor runs on **AWS Bedrock (Claude Opus)** and forces reliable
+structured JSON via a `record_memory` tool the model must call. Install the
+optional dependency and set a Bedrock key:
+
+```bash
+pip install "meshmind[bedrock]"
+export AWS_BEARER_TOKEN_BEDROCK=...   # region us-east-1
+```
+
+When no Bedrock key is present, `ingest_text` transparently falls back to a
+deterministic heuristic extractor, so it always works offline. For tests and
+demos, pass `mock_mode=True` to run the LLM path with a canned response and
+zero network calls.
 
 ---
 
@@ -121,7 +159,7 @@ single hyperedge. See [`DESIGN.md`](DESIGN.md) for the full argument.
 - [x] Portable Markdown+YAML export/import (lossless)
 - [x] SQLite + FTS5 storage, numpy embedding search
 - [x] CLI (`meshmind remember | recall | export | import | demo`)
-- [ ] **LLM-based ingestion** — extract atomic nodes + typed edges from raw turns
+- [x] **LLM-based ingestion** — extract atomic nodes + typed edges from raw turns
 - [ ] Pluggable real embedding models (OpenAI, local sentence-transformers)
 - [ ] Automatic contradiction/supersession detection at ingest
 - [ ] TypeScript SDK reading the same portable format

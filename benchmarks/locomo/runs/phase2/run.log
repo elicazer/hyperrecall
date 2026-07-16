@@ -1,0 +1,27 @@
+conv=conv-26 qas=199  turns=419
+[MeshMind] loading mesh from /home/ubuntu/projects/meshmind/benchmarks/locomo/runs/phase1/conv-26.sqlite
+[MeshMind] running QAs...
+  [meshmind] 20/199  1.64 q/s  eta=109s
+  [meshmind] 40/199  1.77 q/s  eta=90s
+  [meshmind] 60/199  1.81 q/s  eta=77s
+  [meshmind] 80/199  1.86 q/s  eta=64s
+  [meshmind] 100/199  1.89 q/s  eta=52s
+  [meshmind] 120/199  1.90 q/s  eta=41s
+  [meshmind] 140/199  1.92 q/s  eta=31s
+  [meshmind] 160/199  1.83 q/s  eta=21s
+  [meshmind] 180/199  1.85 q/s  eta=10s
+[MeshMind] wrote /home/ubuntu/projects/meshmind/benchmarks/locomo/runs/phase2/conv-26.meshmind.jsonl
+[VectorRAG] loading embedder (sentence-transformers/all-MiniLM-L6-v2)
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 3197.30it/s]
+[VectorRAG] running QAs...
+  [vector_rag] 20/199  2.34 q/s  eta=77s
+  [vector_rag] 40/199  2.23 q/s  eta=71s
+  [vector_rag] 60/199  2.24 q/s  eta=62s
+  [vector_rag] 80/199  2.24 q/s  eta=53s
+  [vector_rag] 100/199  2.21 q/s  eta=45s
+  [vector_rag] 120/199  2.20 q/s  eta=36s
+  [vector_rag] 140/199  2.20 q/s  eta=27s
+  [vector_rag] 160/199  2.21 q/s  eta=18s
+  [vector_rag] 180/199  2.21 q/s  eta=9s
+[VectorRAG] wrote /home/ubuntu/projects/meshmind/benchmarks/locomo/runs/phase2/conv-26.vector_rag.jsonl
