@@ -98,8 +98,10 @@ def main(argv: list[str] | None = None) -> int:
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     db_path = OUT_DIR / f"{conv.sample_id}.sqlite"
-    if db_path.exists():
-        db_path.unlink()
+    for suffix in ("", "-wal", "-shm"):
+        p = Path(str(db_path) + suffix)
+        if p.exists():
+            p.unlink()
 
     mesh = Mesh(str(db_path))
     ext = ExtractorV2(mock_mode=mock, logger=lambda m: None)  # quiet per-merge logs
