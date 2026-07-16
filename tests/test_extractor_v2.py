@@ -87,6 +87,36 @@ def test_mesh_ingest_text_v2_flag():
     assert mesh.stats()["hyperedges"] >= 1
 
 
+def test_duplicate_participants_are_deduped():
+    # Two participants that canonicalize to the SAME node id must not violate
+    # the store's UNIQUE(hyperedge_id, node_id) constraint (regression: conv-26
+    # D1:2 crashed on this).
+    mesh = _mesh()
+    ext = ExtractorV2(mock_mode=True)
+    forced = TurnExtraction(
+        source_text="Luna chased Luna's tail.",
+        entities=[EntityV2(name="Luna", type="Person", description="a dog")],
+        hyperedges=[
+            HyperedgeV2(
+                type="Action",
+                summary="Luna chased her own tail.",
+                participants=[
+                    RelationParticipant(entity="Luna", role="subject"),
+                    RelationParticipant(entity="Luna", role="object"),
+                ],
+            )
+        ],
+    )
+    ext.extract_turn = lambda *a, **k: forced  # type: ignore[assignment]
+    te = ext.ingest(mesh, forced.source_text, speaker="Luna")
+    assert len(te.edge_ids) == 1
+    edge = mesh.store.get_hyperedge(te.edge_ids[0])
+    assert edge is not None
+    # summary + turn + one deduped Luna == arity 3, no duplicate node ids
+    assert edge.arity == 3
+    assert len(edge.node_ids) == len(set(edge.node_ids))
+
+
 def test_empty_turn_is_noop():
     mesh = _mesh()
     ext = ExtractorV2(mock_mode=True)

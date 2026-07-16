@@ -609,6 +609,10 @@ class ExtractorV2:
                 HyperedgeMember(summary_node.id, role="summary", weight=1.0),
                 HyperedgeMember(turn_node.id, role="source", weight=0.3),
             ]
+            # Dedup members by node id: distinct participant names can canonicalize
+            # to the same entity node (a hyperedge can't list a node twice — the
+            # store enforces UNIQUE(hyperedge_id, node_id)). Keep the first role seen.
+            seen_ids = {summary_node.id, turn_node.id}
             for p in h.participants:
                 nid = te.entity_ids.get(p.entity)
                 if nid is None:
@@ -618,6 +622,9 @@ class ExtractorV2:
                     te.entity_ids[p.entity] = node.id
                     te.node_ids.append(node.id)
                     nid = node.id
+                if nid in seen_ids:
+                    continue
+                seen_ids.add(nid)
                 members.append(HyperedgeMember(nid, role=p.role, weight=0.8))
 
             edge = Hyperedge(
