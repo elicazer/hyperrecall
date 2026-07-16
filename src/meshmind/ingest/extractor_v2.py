@@ -530,15 +530,27 @@ class ExtractorV2:
         by_key: dict[tuple[str, str], _EntityRecord] = {
             (r.type, normalize_name(r.name)): r for r in index
         }
+        # Same normalized name under *any* type. Pass 1 sometimes retypes the
+        # same proper noun across turns (e.g. Luna typed Artifact then Person);
+        # for LoCoMo-style dialogue an exact name match is almost always the
+        # same entity, so we merge cross-type rather than fragment the graph.
+        by_name: dict[str, _EntityRecord] = {}
+        for r in index:
+            by_name.setdefault(normalize_name(r.name), r)
         prov = dict(provenance or {})
         prov.setdefault("extractor", "v2")
         prov.setdefault("source_text", te.source_text)
 
         for ent in te.entities:
             kind = ent.type.lower()
-            key = (kind, normalize_name(ent.name))
+            norm = normalize_name(ent.name)
+            key = (kind, norm)
             match = by_key.get(key)
             method = "name"
+            # Exact name under a different type (Pass 1 retyped the same noun).
+            if match is None and norm in by_name:
+                match = by_name[norm]
+                method = f"name-xtype({match.type})"
             # Embedding fallback: only meaningful with a real semantic embedder,
             # but harmless (and logged) with the default hash embedder.
             if match is None:
@@ -567,6 +579,7 @@ class ExtractorV2:
                 rec = _EntityRecord(id=node.id, name=ent.name, type=kind, vec=mesh.embed(ent.name))
                 index.append(rec)
                 by_key[key] = rec
+                by_name.setdefault(norm, rec)
                 self._log(f"    new entity: '{ent.name}' ({ent.type}) -> {node.id}")
 
         # One node holding the raw turn text, so retrieval can surface it.
