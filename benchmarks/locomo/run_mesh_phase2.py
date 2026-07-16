@@ -26,8 +26,16 @@ from meshmind import Mesh  # noqa: E402
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--planner", choices=("legacy", "v2"), default="legacy",
+        "--planner", choices=("legacy", "v2", "v2-rerank"), default="legacy",
         help="query-time retrieval planner (default: legacy merged retrieval)",
+    )
+    parser.add_argument(
+        "--k-candidate", type=int, default=25,
+        help="rerank: candidate edges retrieved before reranking (v2-rerank only)",
+    )
+    parser.add_argument(
+        "--k-final", type=int, default=8,
+        help="rerank: edges kept after reranking (v2-rerank only)",
     )
     args = parser.parse_args(argv)
     if not os.environ.get("GEMINI_API_KEY"):
@@ -41,6 +49,23 @@ def main(argv: list[str] | None = None) -> int:
 
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
     embedder = SentenceTransformer(P.EMBEDDER_NAME)
+
+    # v2-rerank makes two Gemini calls per question (batched rerank + answer),
+    # which spikes the per-minute rate limit. Wrap the shared answerer with a
+    # longer 429-aware backoff so a quota-limited run still completes.
+    import time as _time
+    _base_answer = P.answer
+
+    def _resilient_answer(client, ctx, question, prompt_template=P.ANSWER_PROMPT):
+        for attempt in range(6):
+            out = _base_answer(client, ctx, question, prompt_template)
+            if "RESOURCE_EXHAUSTED" not in out and "429" not in out:
+                return out
+            _time.sleep(min(60, 8 * (2 ** attempt)))
+        return out
+
+    if args.planner == "v2-rerank":
+        P.answer = _resilient_answer
 
     def mm_embed(text: str) -> np.ndarray:
         return embedder.encode(
@@ -71,11 +96,50 @@ def main(argv: list[str] | None = None) -> int:
             "n_edges": len(result.results),
         }
 
+    rerank_pace = float(os.environ.get("RERANK_SLEEP", "5.0"))
+
+    def retrieve_v2_rerank(question: str) -> tuple[str, dict[str, object]]:
+        if rerank_pace:
+            _time.sleep(rerank_pace)  # throttle: 2 Gemini calls/question vs. RPM
+        result = mesh.recall(
+            question,
+            plan="v2-rerank",
+            budget_tokens=None,
+            k_hops=2,
+            max_seeds=P.MESH_MAX_SEEDS,
+            sim_rerank=P.MESH_SIM_RERANK,
+            reinforce_on_access=False,
+            k_candidate=args.k_candidate,
+            k_final=args.k_final,
+        )
+        plan = result.plan
+        rr = result.rerank or {}
+        return result.to_context_string() or "(no relevant memory found)", {
+            "path": "planner-v2-rerank",
+            "question_class": plan.question_class,
+            "question_kind": plan.question_kind,
+            "entities": list(plan.entities),
+            "sub_questions": list(plan.sub_questions),
+            "n_nodes": len(result.nodes),
+            "n_edges": len(result.results),
+            "rerank_applied": rr.get("applied", False),
+            "rerank_reason": rr.get("reason"),
+            "rerank_n_candidates": rr.get("n_candidates", 0),
+            "rerank_promoted_into_top_k": rr.get("promoted_into_top_k", 0),
+            "rerank_deltas": rr.get("deltas", []),
+        }
+
     limit = int(os.environ.get("PHASE2_LIMIT", "0")) or None
     if args.planner == "v2":
         P.OUT_DIR = P.ROOT / "runs" / "planner_v2"
         P.OUT_DIR.mkdir(parents=True, exist_ok=True)
-    retrieve = retrieve_v2 if args.planner == "v2" else dispatcher.retrieve
+    elif args.planner == "v2-rerank":
+        P.OUT_DIR = P.ROOT / "runs" / "rerank_v1"
+        P.OUT_DIR.mkdir(parents=True, exist_ok=True)
+    retrieve = {
+        "v2": retrieve_v2,
+        "v2-rerank": retrieve_v2_rerank,
+    }.get(args.planner, dispatcher.retrieve)
     out = P.run_system(
         "meshmind", conv, client, retrieve,
         limit=limit, prompt_fn=dispatcher.prompt_for,
