@@ -82,6 +82,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--conv", default="conv-26")
     ap.add_argument("--limit", type=int, default=0, help="max turns (0 = all)")
     ap.add_argument("--mock", action="store_true", help="offline heuristic, no API")
+    ap.add_argument("--model", default=None, help="Gemini model (default: extractor v2 default)")
     args = ap.parse_args(argv)
 
     mock = args.mock or not os.environ.get("GEMINI_API_KEY")
@@ -104,7 +105,10 @@ def main(argv: list[str] | None = None) -> int:
             p.unlink()
 
     mesh = Mesh(str(db_path))
-    ext = ExtractorV2(mock_mode=mock, logger=lambda m: None)  # quiet per-merge logs
+    ext_kwargs = {"mock_mode": mock, "logger": lambda m: None}
+    if args.model:
+        ext_kwargs["model"] = args.model
+    ext = ExtractorV2(**ext_kwargs)  # quiet per-merge logs
 
     t0 = time.time()
     n_ok = n_fail = total_edges = total_merges = 0
