@@ -1,0 +1,94 @@
+{
+  "n_turns": 20,
+  "n_questions": 10,
+  "meshmind_v2_moat": {
+    "correct": 10,
+    "total": 10
+  },
+  "vector_rag": {
+    "correct": 0,
+    "total": 10
+  },
+  "rows": [
+    {
+      "question": "What is Maya's current favorite drink?",
+      "mode": "current",
+      "mesh_pass": true,
+      "vector_pass": false,
+      "mesh_context": "[supersedes previous statement of favorite drink on 2025-01-03] [2025-03-14T00:00:00Z] Maya's favorite drink is green tea\n  Relation [Statement]: person=Maya, statement=Maya's favorite drink is green tea\n[supersedes previous statement of project status on 2025-03-10] [2025-09-03T00:00:00Z] Omar's Atlas project is cancelled\n  Relation [Statement]: person=Omar, statement=Omar's Atlas project is cancelled",
+      "vector_context": "[2025-01-03] Maya's favorite drink is coffee\n[2025-03-14] Maya's favorite drink is green tea"
+    },
+    {
+      "question": "What is Noah's current home city?",
+      "mode": "current",
+      "mesh_pass": true,
+      "vector_pass": false,
+      "mesh_context": "[supersedes previous statement of project status on 2025-03-10] [2025-09-03T00:00:00Z] Omar's Atlas project is cancelled\n  Relation [Statement]: person=Omar, statement=Omar's Atlas project is cancelled\n[this contradicts an earlier statement on 2025-01-12, preferring recent] [2025-05-09T00:00:00Z] Priya works from home on Fridays\n  Relation [Statement]: person=Priya, statement=Priya works from home on Fridays\n[supersedes previous statement of home city on 2025-01-08] [2025-04-02T00:00:00Z] Noah lives in Seattle\n  Relation [Statement]: person=Noah, statement=Noah lives in Seattle\n[supersedes previous statement of meeting day on 2025-02-20] [2025-08-05T00:00:00Z] Mateo's team meeting is on Thursday\n  Relation [Statement]: person=Mateo, statement=Mateo's team meeting is on Thursday\n[supersedes previous statement of favorite drink on 2025-01-03] [2025-03-14T00:00:00Z] Maya's favorite drink is green tea\n  Relation [Statement]: person=Maya, statement=Maya's favorite drink is green tea",
+      "vector_context": "[2025-09-03] Omar's Atlas project is cancelled\n[2025-03-10] Omar's Atlas project is active"
+    },
+    {
+      "question": "What is Priya's current work schedule?",
+      "mode": "current",
+      "mesh_pass": true,
+      "vector_pass": false,
+      "mesh_context": "[supersedes previous statement of project status on 2025-03-10] [2025-09-03T00:00:00Z] Omar's Atlas project is cancelled\n  Relation [Statement]: person=Omar, statement=Omar's Atlas project is cancelled\n[supersedes previous statement of favorite drink on 2025-01-03] [2025-03-14T00:00:00Z] Maya's favorite drink is green tea\n  Relation [Statement]: person=Maya, statement=Maya's favorite drink is green tea\n[this contradicts an earlier statement on 2025-01-12, preferring recent] [2025-05-09T00:00:00Z] Priya works from home on Fridays\n  Relation [Statement]: person=Priya, statement=Priya works from home on Fridays\n[supersedes previous statement of meeting day on 2025-02-20] [2025-08-05T00:00:00Z] Mateo's team meeting is on Thursday\n  Relation [Statement]: person=Mateo, statement=Mateo's team meeting is on Thursday",
+      "vector_context": "[2025-09-03] Omar's Atlas project is cancelled\n[2025-03-10] Omar's Atlas project is active"
+    },
+    {
+      "question": "What is Leo's current pet ownership?",
+      "mode": "current",
+      "mesh_pass": true,
+      "vector_pass": false,
+      "mesh_context": "[supersedes previous statement of project status on 2025-03-10] [2025-09-03T00:00:00Z] Omar's Atlas project is cancelled\n  Relation [Statement]: person=Omar, statement=Omar's Atlas project is cancelled\n[supersedes previous statement of favorite drink on 2025-01-03] [2025-03-14T00:00:00Z] Maya's favorite drink is green tea\n  Relation [Statement]: person=Maya, statement=Maya's favorite drink is green tea\n[this contradicts an earlier statement on 2025-01-20, preferring recent] [2025-06-11T00:00:00Z] Leo owns a rescue dog\n  Relation [Statement]: person=Leo, statement=Leo owns a rescue dog\n[supersedes previous statement of meeting day on 2025-02-20] [2025-08-05T00:00:00Z] Mateo's team meeting is on Thursday\n  Relation [Statement]: person=Mateo, statement=Mateo's team meeting is on Thursday",
+      "vector_context": "[2025-09-03] Omar's Atlas project is cancelled\n[2025-03-10] Omar's Atlas project is active"
+    },
+    {
+      "question": "What is Sofia's current travel plan?",
+      "mode": "current",
+      "mesh_pass": true,
+      "vector_pass": false,
+      "mesh_context": "[supersedes previous statement of project status on 2025-03-10] [2025-09-03T00:00:00Z] Omar's Atlas project is cancelled\n  Relation [Statement]: person=Omar, statement=Omar's Atlas project is cancelled\n[supersedes previous statement of favorite drink on 2025-01-03] [2025-03-14T00:00:00Z] Maya's favorite drink is green tea\n  Relation [Statement]: person=Maya, statement=Maya's favorite drink is green tea\n[supersedes previous statement of travel plan on 2025-02-01] [2025-06-22T00:00:00Z] Sofia plans to visit Lisbon\n  Relation [Statement]: person=Sofia, statement=Sofia plans to visit Lisbon\n[supersedes previous statement of meeting day on 2025-02-20] [2025-08-05T00:00:00Z] Mateo's team meeting is on Thursday\n  Relation [Statement]: person=Mateo, statement=Mateo's team meeting is on Thursday",
+      "vector_context": "[2025-09-03] Omar's Atlas project is cancelled\n[2025-03-10] Omar's Atlas project is active"
+    },
+    {
+      "question": "How did Ethan's view change about programming language?",
+      "mode": "history",
+      "mesh_pass": true,
+      "vector_pass": false,
+      "mesh_context": "[after] [2025-07-01T00:00:00Z] Ethan prefers Rust\n  Relation [Statement]: person=Ethan, statement=Ethan prefers Rust\n[before] [2025-02-07T00:00:00Z] Ethan prefers Python\n  Relation [Statement]: person=Ethan, statement=Ethan prefers Python\n[before] [2025-03-10T00:00:00Z] Omar's Atlas project is active\n  Relation [Statement]: person=Omar, statement=Omar's Atlas project is active\n[before] [2025-01-03T00:00:00Z] Maya's favorite drink is coffee\n  Relation [Statement]: person=Maya, statement=Maya's favorite drink is coffee\n[after] [2025-09-03T00:00:00Z] Omar's Atlas project is cancelled\n  Relation [Statement]: person=Omar, statement=Omar's Atlas project is cancelled\n[after] [2025-03-14T00:00:00Z] Maya's favorite drink is green tea\n  Relation [Statement]: person=Maya, statement=Maya's favorite drink is green tea",
+      "vector_context": "[2025-07-01] Ethan prefers Rust\n[2025-02-07] Ethan prefers Python"
+    },
+    {
+      "question": "How did Aisha's view change about diet?",
+      "mode": "history",
+      "mesh_pass": true,
+      "vector_pass": false,
+      "mesh_context": "[after] [2025-07-17T00:00:00Z] Aisha avoids dairy products\n  Relation [Statement]: person=Aisha, statement=Aisha avoids dairy products\n[before] [2025-02-13T00:00:00Z] Aisha eats dairy products\n  Relation [Statement]: person=Aisha, statement=Aisha eats dairy products\n[before] [2025-03-10T00:00:00Z] Omar's Atlas project is active\n  Relation [Statement]: person=Omar, statement=Omar's Atlas project is active\n[before] [2025-01-03T00:00:00Z] Maya's favorite drink is coffee\n  Relation [Statement]: person=Maya, statement=Maya's favorite drink is coffee\n[after] [2025-09-03T00:00:00Z] Omar's Atlas project is cancelled\n  Relation [Statement]: person=Omar, statement=Omar's Atlas project is cancelled\n[after] [2025-03-14T00:00:00Z] Maya's favorite drink is green tea\n  Relation [Statement]: person=Maya, statement=Maya's favorite drink is green tea",
+      "vector_context": "[2025-07-17] Aisha avoids dairy products\n[2025-02-13] Aisha eats dairy products"
+    },
+    {
+      "question": "How did Mateo's view change about meeting day?",
+      "mode": "history",
+      "mesh_pass": true,
+      "vector_pass": false,
+      "mesh_context": "[after] [2025-08-05T00:00:00Z] Mateo's team meeting is on Thursday\n  Relation [Statement]: person=Mateo, statement=Mateo's team meeting is on Thursday\n[before] [2025-02-20T00:00:00Z] Mateo's team meeting is on Tuesday\n  Relation [Statement]: person=Mateo, statement=Mateo's team meeting is on Tuesday\n[before] [2025-03-10T00:00:00Z] Omar's Atlas project is active\n  Relation [Statement]: person=Omar, statement=Omar's Atlas project is active\n[before] [2025-01-03T00:00:00Z] Maya's favorite drink is coffee\n  Relation [Statement]: person=Maya, statement=Maya's favorite drink is coffee\n[after] [2025-09-03T00:00:00Z] Omar's Atlas project is cancelled\n  Relation [Statement]: person=Omar, statement=Omar's Atlas project is cancelled\n[after] [2025-03-14T00:00:00Z] Maya's favorite drink is green tea\n  Relation [Statement]: person=Maya, statement=Maya's favorite drink is green tea",
+      "vector_context": "[2025-08-05] Mateo's team meeting is on Thursday\n[2025-02-20] Mateo's team meeting is on Tuesday"
+    },
+    {
+      "question": "How did Chloe's view change about car ownership?",
+      "mode": "history",
+      "mesh_pass": true,
+      "vector_pass": false,
+      "mesh_context": "[after] [2025-08-19T00:00:00Z] Chloe sold the blue sedan and has no car\n  Relation [Statement]: person=Chloe, statement=Chloe sold the blue sedan and has no car\n[before] [2025-03-02T00:00:00Z] Chloe drives a blue sedan\n  Relation [Statement]: person=Chloe, statement=Chloe drives a blue sedan\n[before] [2025-03-10T00:00:00Z] Omar's Atlas project is active\n  Relation [Statement]: person=Omar, statement=Omar's Atlas project is active\n[before] [2025-01-03T00:00:00Z] Maya's favorite drink is coffee\n  Relation [Statement]: person=Maya, statement=Maya's favorite drink is coffee\n[after] [2025-09-03T00:00:00Z] Omar's Atlas project is cancelled\n  Relation [Statement]: person=Omar, statement=Omar's Atlas project is cancelled\n[after] [2025-03-14T00:00:00Z] Maya's favorite drink is green tea\n  Relation [Statement]: person=Maya, statement=Maya's favorite drink is green tea\n[before] [2025-02-13T00:00:00Z] Aisha eats dairy products\n  Relation [Statement]: person=Aisha, statement=Aisha eats dairy products\n[after] [2025-07-17T00:00:00Z] Aisha avoids dairy products\n  Relation [Statement]: person=Aisha, statement=Aisha avoids dairy products",
+      "vector_context": "[2025-08-19] Chloe sold the blue sedan and has no car\n[2025-03-02] Chloe drives a blue sedan"
+    },
+    {
+      "question": "How did Omar's view change about project status?",
+      "mode": "history",
+      "mesh_pass": true,
+      "vector_pass": false,
+      "mesh_context": "[after] [2025-09-03T00:00:00Z] Omar's Atlas project is cancelled\n  Relation [Statement]: person=Omar, statement=Omar's Atlas project is cancelled\n[before] [2025-03-10T00:00:00Z] Omar's Atlas project is active\n  Relation [Statement]: person=Omar, statement=Omar's Atlas project is active\n[after] [2025-03-14T00:00:00Z] Maya's favorite drink is green tea\n  Relation [Statement]: person=Maya, statement=Maya's favorite drink is green tea\n[before] [2025-01-03T00:00:00Z] Maya's favorite drink is coffee\n  Relation [Statement]: person=Maya, statement=Maya's favorite drink is coffee\n[before] [2025-02-20T00:00:00Z] Mateo's team meeting is on Tuesday\n  Relation [Statement]: person=Mateo, statement=Mateo's team meeting is on Tuesday\n[after] [2025-08-05T00:00:00Z] Mateo's team meeting is on Thursday\n  Relation [Statement]: person=Mateo, statement=Mateo's team meeting is on Thursday",
+      "vector_context": "[2025-09-03] Omar's Atlas project is cancelled\n[2025-03-10] Omar's Atlas project is active"
+    }
+  ]
+}

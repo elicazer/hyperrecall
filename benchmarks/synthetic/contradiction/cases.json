@@ -1,0 +1,12 @@
+[
+  {"person":"Maya","topic":"favorite drink","old":"Maya's favorite drink is coffee","new":"Maya's favorite drink is green tea","old_date":"2025-01-03","new_date":"2025-03-14","relation":"Supersession"},
+  {"person":"Noah","topic":"home city","old":"Noah lives in Boston","new":"Noah lives in Seattle","old_date":"2025-01-08","new_date":"2025-04-02","relation":"Supersession"},
+  {"person":"Priya","topic":"work schedule","old":"Priya works in the office on Fridays","new":"Priya works from home on Fridays","old_date":"2025-01-12","new_date":"2025-05-09","relation":"Contradiction"},
+  {"person":"Leo","topic":"pet ownership","old":"Leo does not own a dog","new":"Leo owns a rescue dog","old_date":"2025-01-20","new_date":"2025-06-11","relation":"Contradiction"},
+  {"person":"Sofia","topic":"travel plan","old":"Sofia plans to visit Rome","new":"Sofia plans to visit Lisbon","old_date":"2025-02-01","new_date":"2025-06-22","relation":"Supersession"},
+  {"person":"Ethan","topic":"programming language","old":"Ethan prefers Python","new":"Ethan prefers Rust","old_date":"2025-02-07","new_date":"2025-07-01","relation":"Supersession"},
+  {"person":"Aisha","topic":"diet","old":"Aisha eats dairy products","new":"Aisha avoids dairy products","old_date":"2025-02-13","new_date":"2025-07-17","relation":"Contradiction"},
+  {"person":"Mateo","topic":"meeting day","old":"Mateo's team meeting is on Tuesday","new":"Mateo's team meeting is on Thursday","old_date":"2025-02-20","new_date":"2025-08-05","relation":"Supersession"},
+  {"person":"Chloe","topic":"car ownership","old":"Chloe drives a blue sedan","new":"Chloe sold the blue sedan and has no car","old_date":"2025-03-02","new_date":"2025-08-19","relation":"Contradiction"},
+  {"person":"Omar","topic":"project status","old":"Omar's Atlas project is active","new":"Omar's Atlas project is cancelled","old_date":"2025-03-10","new_date":"2025-09-03","relation":"Supersession"}
+]
