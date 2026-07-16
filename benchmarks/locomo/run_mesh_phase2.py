@@ -28,8 +28,9 @@ def main() -> int:
         return 2
     conv = next(c for c in load() if c.sample_id == P.CONV_ID)
     print(f"conv={P.CONV_ID} qas={len(conv.qa)}  mesh={P.MESH_DB.name}")
-    print(f"tuning: seeds={P.MESH_MAX_SEEDS} sim_rerank={P.MESH_SIM_RERANK} "
-          f"turns={P.MESH_MAX_TURNS}")
+    print(f"routing: temporal_path={P.MESH_TEMPORAL_PATH} "
+          f"temporal_prompt={P.MESH_TEMPORAL_PROMPT} sim_rerank={P.MESH_SIM_RERANK} "
+          f"no_dates={P.MESH_NO_DATES} seeds={P.MESH_MAX_SEEDS}")
 
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
     embedder = SentenceTransformer(P.EMBEDDER_NAME)
@@ -40,12 +41,13 @@ def main() -> int:
         )[0].astype(np.float32)
 
     mesh = Mesh(str(P.MESH_DB), embed=mm_embed)
-
-    def mm_retrieve(q: str):
-        return P.render_mesh_context(mesh, q)
+    dispatcher = P.MeshDispatcher(mesh, embedder, conv)
 
     limit = int(os.environ.get("PHASE2_LIMIT", "0")) or None
-    out = P.run_system("meshmind", conv, client, mm_retrieve, limit=limit)
+    out = P.run_system(
+        "meshmind", conv, client, dispatcher.retrieve,
+        limit=limit, prompt_fn=dispatcher.prompt_for,
+    )
     print(f"wrote {out}")
     return 0
 
