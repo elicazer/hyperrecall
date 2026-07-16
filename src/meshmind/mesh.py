@@ -189,10 +189,10 @@ class Mesh:
         prefer_newest: bool = True,
         reinforce_on_access: bool = True,
         sim_rerank: float = 0.0,
-        plan: Literal["v2"] | None = None,
+        plan: Literal["v2", "v2-moat"] | None = None,
     ) -> Subgraph:
         """Retrieve a connected subgraph of memories relevant to ``query``."""
-        if plan == "v2":
+        if plan in {"v2", "v2-moat"}:
             from .query.planner import QueryPlanner
 
             return QueryPlanner(self.store, embed=self.embed, curve=self.curve).recall(
@@ -203,6 +203,7 @@ class Mesh:
                 prefer_newest=prefer_newest,
                 reinforce_on_access=reinforce_on_access,
                 sim_rerank=sim_rerank,
+                moat=plan == "v2-moat",
             )
         if plan is not None:
             raise ValueError(f"unknown recall plan: {plan!r}")
@@ -218,6 +219,10 @@ class Mesh:
             sim_rerank=sim_rerank,
             curve=self.curve,
         )
+
+    def decay(self, rate: float = 0.01) -> None:
+        """Reduce every hyperedge's strength by ``rate``, floored at zero."""
+        self.store.decay_hyperedge_strengths(rate)
 
     # -- introspection -----------------------------------------------------
     def inspect_node(self, node_id: str) -> dict[str, Any]:

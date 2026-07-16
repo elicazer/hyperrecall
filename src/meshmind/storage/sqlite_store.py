@@ -182,6 +182,28 @@ class SqliteStore:
         ).fetchall()
         return [self._row_to_edge(r) for r in rows]
 
+    def bump_hyperedge_strength(self, edge_id: str, amount: float = 0.05) -> float:
+        """Increase a hyperedge's persisted strength, capped at one."""
+        self._conn.execute(
+            """UPDATE hyperedges
+               SET activation_weight = MIN(1.0, activation_weight + ?)
+               WHERE id = ?""",
+            (amount, edge_id),
+        )
+        self._conn.commit()
+        edge = self.get_hyperedge(edge_id)
+        return edge.activation_weight if edge else 0.0
+
+    def decay_hyperedge_strengths(self, rate: float = 0.01) -> None:
+        """Reduce all persisted hyperedge strengths, floored at zero."""
+        if rate < 0:
+            raise ValueError("decay rate must be non-negative")
+        self._conn.execute(
+            "UPDATE hyperedges SET activation_weight = MAX(0.0, activation_weight - ?)",
+            (rate,),
+        )
+        self._conn.commit()
+
     # -- activation: decay + reinforcement --------------------------------
     def live_activation(self, node_id: str, *, curve: DecayFn = exponential_decay) -> float:
         row = self._conn.execute(

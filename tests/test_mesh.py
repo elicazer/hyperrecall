@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from meshmind import Mesh
+from meshmind import Hyperedge, HyperedgeMember, Mesh, Node
 
 
 def test_remember_and_recall_roundtrip():
@@ -89,4 +89,50 @@ def test_supersession_prefers_newest_but_keeps_history():
     old_scored = [sn for sn in result.nodes if sn.node.id == old.id][0]
     assert old_scored.superseded is True
     assert "OUTDATED" in result.to_context_string()
+    mesh.close()
+
+
+def test_v2_moat_retrieval_bumps_only_returned_edge_strength(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    mesh = Mesh(":memory:")
+    person = mesh.add_node(Node("Ari", kind="entity"))
+    fact = mesh.add_node(Node("Ari likes tea"))
+    unrelated_a = mesh.add_node(Node("unrelated alpha"))
+    unrelated_b = mesh.add_node(Node("unrelated beta"))
+    returned = mesh.add_hyperedge(Hyperedge(
+        type="Preference", activation_weight=0.40,
+        members=[HyperedgeMember(person.id, "person"), HyperedgeMember(fact.id, "preference")],
+    ))
+    untouched = mesh.add_hyperedge(Hyperedge(
+        type="Statement", activation_weight=0.40,
+        members=[HyperedgeMember(unrelated_a.id), HyperedgeMember(unrelated_b.id)],
+    ))
+
+    result = mesh.recall(
+        "What does Ari like?", plan="v2-moat", max_seeds=1, k_hops=1,
+        reinforce_on_access=False,
+    )
+
+    assert returned.id in {edge.id for edge in result.hyperedges}
+    assert mesh.store.get_hyperedge(returned.id).activation_weight == 0.45
+    assert mesh.store.get_hyperedge(untouched.id).activation_weight == 0.40
+    mesh.close()
+
+
+def test_decay_reduces_all_edge_strengths_with_floor():
+    mesh = Mesh(":memory:")
+    nodes = [mesh.add_node(Node(f"node {index}")) for index in range(4)]
+    weak = mesh.add_hyperedge(Hyperedge(
+        type="Statement", activation_weight=0.005,
+        members=[HyperedgeMember(nodes[0].id), HyperedgeMember(nodes[1].id)],
+    ))
+    strong = mesh.add_hyperedge(Hyperedge(
+        type="Statement", activation_weight=0.50,
+        members=[HyperedgeMember(nodes[2].id), HyperedgeMember(nodes[3].id)],
+    ))
+
+    mesh.decay(rate=0.01)
+
+    assert mesh.store.get_hyperedge(weak.id).activation_weight == 0.0
+    assert mesh.store.get_hyperedge(strong.id).activation_weight == 0.49
     mesh.close()

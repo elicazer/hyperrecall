@@ -67,15 +67,59 @@ def test_entity_retrieval_materializes_edge_records():
 def test_superseded_contradiction_keeps_newest_unless_history_requested():
     mesh, _, old, new = _memory_mesh()
     planner = QueryPlanner(mesh.store, embed=mesh.embed, llm=None, use_gemini=False)
-    current = planner.recall("What does Eli remember?", reinforce_on_access=False)
+    current = planner.recall("What does Eli remember?", reinforce_on_access=False, moat=True)
     assert new.id in current.node_ids()
     assert old.id not in current.node_ids()
 
     history = planner.recall(
-        "What did we used to think about Eli?", reinforce_on_access=False
+        "What did we used to think about Eli?", reinforce_on_access=False, moat=True
     )
     assert old.id in history.node_ids() and new.id in history.node_ids()
-    assert any("HISTORICAL_CONFLICT" in row.annotations for row in history.results)
+    assert {annotation for row in history.results for annotation in row.annotations} >= {
+        "before", "after"
+    }
+
+
+def test_moat_supersession_annotates_surviving_edge_with_topic_and_date(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    mesh, _, old, new = _memory_mesh()
+    result = mesh.recall(
+        "Where does Eli live?", plan="v2-moat", reinforce_on_access=False
+    )
+    assert old.id not in result.node_ids() and new.id in result.node_ids()
+    annotations = [annotation for row in result.results for annotation in row.annotations]
+    assert any(
+        annotation.startswith("supersedes previous statement of Eli lives in Irvine on 1970-01-01")
+        for annotation in annotations
+    )
+
+
+def test_moat_direct_contradiction_prefers_recent_and_annotates(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    mesh, eli, old, new = _memory_mesh()
+    # Isolate contradiction behavior from the helper's supersession relation.
+    mesh.store._conn.execute("DELETE FROM hyperedges WHERE type = ?", ("Supersedes",))
+    mesh.store._conn.commit()
+    result = mesh.recall(
+        "What does Eli remember?", plan="v2-moat", reinforce_on_access=False
+    )
+    assert old.id not in result.node_ids() and new.id in result.node_ids() and eli.id in result.node_ids()
+    assert any(
+        "this contradicts an earlier statement on 1970-01-01, preferring recent"
+        in row.annotations
+        for row in result.results
+    )
+
+
+def test_moat_change_question_labels_before_and_after(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    mesh, _, old, new = _memory_mesh()
+    result = mesh.recall(
+        "How did Eli's view change?", plan="v2-moat", reinforce_on_access=False
+    )
+    assert old.id in result.node_ids() and new.id in result.node_ids()
+    labels = {annotation for row in result.results for annotation in row.annotations}
+    assert {"before", "after"}.issubset(labels)
 
 
 def test_temporal_before_filter():

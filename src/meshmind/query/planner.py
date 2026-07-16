@@ -33,7 +33,9 @@ QuestionClass = Literal[
 ]
 _CLASSES = {"single_hop", "multi_hop", "temporal", "open_domain", "adversarial"}
 _OLD_BELIEF = re.compile(
-    r"\b(used to (?:think|believe|say)|previously|formerly|old belief|at first)\b", re.I
+    r"\b(used to (?:think|believe|say|like)|previously|formerly|old belief|at first|"
+    r"how did .{0,80}(?:change|view evolve)|how .{0,80}(?:view|opinion|preference) changed)\b",
+    re.I,
 )
 _TEMPORAL = re.compile(
     r"\b(when|before|after|during|while|until|since|latest|newest|first|last|"
@@ -133,7 +135,7 @@ LLMCallable = Callable[[str], str | dict[str, Any]]
 class GeminiPlannerClient:
     """Small ``google-generativeai`` adapter with exponential backoff."""
 
-    def __init__(self, api_key: str | None = None, model: str = "gemini-2.5-pro") -> None:
+    def __init__(self, api_key: str | None = None, model: str = "gemini-2.5-flash") -> None:
         key = api_key or os.environ.get("GEMINI_API_KEY")
         if not key:
             raise RuntimeError("GEMINI_API_KEY is required for Gemini query planning")
@@ -248,6 +250,7 @@ class QueryPlanner:
         prefer_newest: bool = True,
         reinforce_on_access: bool = True,
         sim_rerank: float = 0.0,
+        moat: bool = False,
     ) -> PlannedRecall:
         plan = self.decompose(question, self.classify(question))
         kwargs = dict(
@@ -264,10 +267,13 @@ class QueryPlanner:
             subgraph = legacy_recall(self.store, question, **kwargs)
 
         keep_history = bool(_OLD_BELIEF.search(question))
-        subgraph = self._post_filter(subgraph, keep_history=keep_history)
+        subgraph, annotations = self._post_filter(subgraph, keep_history=keep_history)
         if plan.question_class == "temporal":
             subgraph = self._temporal_filter(subgraph, plan.time_constraints)
-        results = self._assemble(subgraph, keep_history=keep_history)
+        results = self._assemble(subgraph, annotations=annotations)
+        if moat:
+            for result in results:
+                self.store.bump_hyperedge_strength(result.edge.id)
         return PlannedRecall(
             query=question, nodes=subgraph.nodes, hyperedges=subgraph.hyperedges,
             plan=plan, results=results,
@@ -319,40 +325,49 @@ class QueryPlanner:
                 edges.update((edge.id, edge) for edge in self.store.edges_for_node(nid))
         return Subgraph(question, sorted(by_id.values(), key=lambda x: x.score, reverse=True), list(edges.values()))
 
-    def _post_filter(self, graph: Subgraph, *, keep_history: bool) -> Subgraph:
-        """Stage 3: remove superseded claims and select newest contradictions."""
-        by_id = {sn.node.id: sn for sn in graph.nodes}
-        superseded: set[str] = set()
-        for edge in _edges_of_types(self.store, SUPERSEDES, "Supersession", "Supersedes"):
-            old = [m.node_id for m in edge.members if m.role in {"old", "target"}]
-            new = [m.node_id for m in edge.members if m.role in {"new", "replacement"}]
-            if not old and len(edge.members) >= 2:
-                ordered = sorted(edge.members, key=lambda m: _node_time(self.store, m.node_id))
-                old, new = [ordered[0].node_id], [ordered[-1].node_id]
-            if new and max((_node_time(self.store, x) for x in new), default=0) >= max(
-                (_node_time(self.store, x) for x in old), default=0
-            ):
-                superseded.update(old)
+    def _post_filter(
+        self, graph: Subgraph, *, keep_history: bool
+    ) -> tuple[Subgraph, dict[str, list[str]]]:
+        """Resolve conflict relations between the retrieved content edges."""
+        relation_types = {
+            SUPERSEDES, "Supersession", "Supersedes",
+            CONTRADICTS, "Contradiction", "Contradicts",
+        }
+        content = [edge for edge in graph.hyperedges if edge.type not in relation_types]
+        by_node: dict[str, list[Hyperedge]] = {}
+        for edge in content:
+            for node_id in edge.node_ids:
+                by_node.setdefault(node_id, []).append(edge)
+        annotations: dict[str, list[str]] = {}
+        discard: set[str] = set()
 
-        discard = set() if keep_history else superseded
-        contradiction_edges = _edges_of_types(
-            self.store, CONTRADICTS, "Contradiction", "Contradicts"
-        )
-        for edge in contradiction_edges:
-            present = [nid for nid in edge.node_ids if nid in by_id and nid not in discard]
-            if len(present) < 2 or keep_history:
+        relations = _edges_of_types(self.store, *relation_types)
+        for relation in relations:
+            involved = {edge.id: edge for nid in relation.node_ids for edge in by_node.get(nid, [])}
+            if len(involved) < 2:
                 continue
-            newest = max(present, key=lambda nid: _node_time(self.store, nid))
-            discard.update(nid for nid in present if nid != newest)
+            ordered = sorted(involved.values(), key=lambda edge: (_edge_time(edge), edge.id))
+            old, new = ordered[0], ordered[-1]
+            old_date = _format_date(_edge_time(old))
+            if keep_history:
+                annotations.setdefault(old.id, []).append("before")
+                annotations.setdefault(new.id, []).append("after")
+                continue
+            discard.add(old.id)
+            if relation.type in {SUPERSEDES, "Supersession", "Supersedes"}:
+                topic = str(relation.metadata.get("note") or _edge_topic(new, self.store))
+                annotations.setdefault(new.id, []).append(
+                    f"supersedes previous statement of {topic} on {old_date}"
+                )
+            else:
+                annotations.setdefault(new.id, []).append(
+                    f"this contradicts an earlier statement on {old_date}, preferring recent"
+                )
 
-        nodes = [sn for sn in graph.nodes if sn.node.id not in discard]
-        kept = {sn.node.id for sn in nodes}
-        edges = [
-            edge for edge in graph.hyperedges
-            if edge.type not in {SUPERSEDES, "Supersession", CONTRADICTS, "Contradiction"}
-            and any(nid in kept for nid in edge.node_ids)
-        ]
-        return Subgraph(graph.query, nodes, edges)
+        edges = [edge for edge in content if edge.id not in discard]
+        kept_ids = {nid for edge in edges for nid in edge.node_ids}
+        nodes = [sn for sn in graph.nodes if sn.node.id in kept_ids]
+        return Subgraph(graph.query, nodes, edges), annotations
 
     def _temporal_filter(
         self, graph: Subgraph, constraints: Sequence[TimeConstraint]
@@ -375,25 +390,30 @@ class QueryPlanner:
         ids = {nid for edge in edges for nid in edge.node_ids}
         return Subgraph(graph.query, [sn for sn in graph.nodes if sn.node.id in ids], edges)
 
-    def _assemble(self, graph: Subgraph, *, keep_history: bool) -> list[EdgeResult]:
+    def _assemble(
+        self, graph: Subgraph, *, annotations: dict[str, list[str]] | None = None
+    ) -> list[EdgeResult]:
         """Stage 4: materialize participants, timestamp, and provenance."""
         results: list[EdgeResult] = []
-        contradiction_ids = {
-            nid for edge in _edges_of_types(self.store, CONTRADICTS, "Contradiction")
-            for nid in edge.node_ids
-        }
-        for edge in sorted(graph.hyperedges, key=_edge_time):
+        node_scores = {sn.node.id: sn.score for sn in graph.nodes}
+        for edge in sorted(
+            graph.hyperedges,
+            key=lambda item: (
+                max((node_scores.get(nid, 0.0) for nid in item.node_ids), default=0.0),
+                item.activation_weight,
+                _edge_time(item),
+            ),
+            reverse=True,
+        ):
             participants = []
             for member in edge.members:
                 node = self.store.get_node(member.node_id, curve=self.curve)
                 if node:
                     participants.append(Participant(node.id, member.role, node.text, node.kind))
-            annotations: list[str] = []
-            if keep_history and contradiction_ids.intersection(edge.node_ids):
-                annotations.append("HISTORICAL_CONFLICT")
             results.append(EdgeResult(
                 edge=edge, participants=tuple(participants), timestamp=_edge_time(edge),
-                provenance=dict(edge.provenance), annotations=tuple(annotations),
+                provenance=dict(edge.provenance),
+                annotations=tuple((annotations or {}).get(edge.id, ())),
             ))
         return results
 
@@ -511,6 +531,19 @@ def _format_timestamp(timestamp: float) -> str:
     if timestamp <= 0:
         return ""
     return datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _format_date(timestamp: float) -> str:
+    return datetime.fromtimestamp(timestamp, tz=timezone.utc).date().isoformat()
+
+
+def _edge_topic(edge: Hyperedge, store: SqliteStore) -> str:
+    for member in edge.members:
+        if member.role not in {"person", "speaker", "subject", "entity"}:
+            node = store.get_node(member.node_id)
+            if node:
+                return node.text
+    return edge.type.lower()
 
 
 def _demo() -> int:
