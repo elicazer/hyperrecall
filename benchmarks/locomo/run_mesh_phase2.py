@@ -98,17 +98,54 @@ def main(argv: list[str] | None = None) -> int:
 
     rerank_pace = float(os.environ.get("RERANK_SLEEP", "5.0"))
 
+    # Rerank scoring goes through the SAME new-SDK client as the answerer (the
+    # deprecated google.generativeai path the planner ships trips the free-tier
+    # RPM limit noticeably harder). One batched JSON call per question, with a
+    # 429-aware wait since the RPM window recovers in ~60s.
+    from google.genai import types as _gtypes  # noqa: E402
+
+    def flash_score(prompt: str) -> str:
+        for attempt in range(6):
+            try:
+                resp = client.models.generate_content(
+                    model=P.MODEL,
+                    contents=[_gtypes.Content(
+                        role="user", parts=[_gtypes.Part.from_text(text=prompt)])],
+                    config=_gtypes.GenerateContentConfig(
+                        temperature=0.0,
+                        thinking_config=_gtypes.ThinkingConfig(thinking_budget=0),
+                        max_output_tokens=400,
+                        response_mime_type="application/json",
+                    ),
+                )
+                return resp.text or "{}"
+            except Exception as exc:
+                if "429" not in str(exc) and "RESOURCE_EXHAUSTED" not in str(exc):
+                    raise
+                if attempt == 5:
+                    raise
+                _time.sleep(min(60, 15 * (attempt + 1)))
+        return "{}"
+
+    # Heuristic classification (llm=None) keeps this path at 2 Gemini calls per
+    # question (rerank + answer); the reranker is what we are measuring here.
+    from meshmind.query.planner import QueryPlanner  # noqa: E402
+    rerank_planner = QueryPlanner(
+        mesh.store, embed=mm_embed, curve=mesh.curve,
+        llm=None, rerank_llm=flash_score, use_gemini=False,
+    )
+
     def retrieve_v2_rerank(question: str) -> tuple[str, dict[str, object]]:
         if rerank_pace:
             _time.sleep(rerank_pace)  # throttle: 2 Gemini calls/question vs. RPM
-        result = mesh.recall(
+        result = rerank_planner.recall(
             question,
-            plan="v2-rerank",
             budget_tokens=None,
             k_hops=2,
             max_seeds=P.MESH_MAX_SEEDS,
             sim_rerank=P.MESH_SIM_RERANK,
             reinforce_on_access=False,
+            rerank=True,
             k_candidate=args.k_candidate,
             k_final=args.k_final,
         )
