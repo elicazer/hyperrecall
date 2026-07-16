@@ -123,7 +123,10 @@ def run_system(name: str, conv: Conversation, run_dir: Path, evaluator: GeminiJu
         cost = system.cost_record()
         system.close()
     rows = read_jsonl(output)
-    return {**summarize(rows), "cost": cost, "seconds": time.time() - started}
+    return {
+        **summarize(rows), "complete": len(rows) == len(conv.qa),
+        "n_expected": len(conv.qa), "cost": cost, "seconds": time.time() - started,
+    }
 
 
 def main() -> int:
@@ -160,6 +163,13 @@ def main() -> int:
             summary["skipped"][name] = reason
             print(f"[{name}] SKIPPED: {reason}", flush=True)
         except Exception as exc:
+            partial = read_jsonl(run_dir / f"{name}.jsonl")
+            if partial:
+                summary["systems"][name] = {
+                    **summarize(partial), "complete": False,
+                    "n_expected": len(conv.qa), "cost": None,
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
             summary["skipped"][name] = f"FAILED: {type(exc).__name__}: {exc}"
             print(f"[{name}] FAILED: {type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
     summary["model_cost"] = evaluator.cost_record()
