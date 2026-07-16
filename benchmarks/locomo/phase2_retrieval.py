@@ -58,6 +58,13 @@ MESH_MAX_SEEDS = 16        # semantic+lexical seed nodes to start activation fro
 MESH_SIM_RERANK = 0.85     # blend weight: query<->node similarity vs activation
 MESH_MAX_TURNS = 15        # raw turns rendered into the context
 
+# Ablation toggles (env-overridable so runs stay reproducible from the CLI).
+MESH_SIM_RERANK = float(os.environ.get("MESH_SIM_RERANK", MESH_SIM_RERANK))
+MESH_NO_DATES = os.environ.get("MESH_NO_DATES") == "1"   # drop timestamp grounding
+# Point at an alternate embedded mesh (e.g. bare-text embeddings) for ablation.
+if os.environ.get("MESH_EMBED_DB"):
+    MESH_DB = Path(os.environ["MESH_EMBED_DB"])
+
 EMBEDDER_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 # Cue words that mark a question as temporal -> order the context chronologically.
@@ -119,6 +126,10 @@ def render_mesh_context(mesh: Mesh, question: str) -> tuple[str, dict[str, Any]]
         k_hops=2,
         max_seeds=MESH_MAX_SEEDS,
         sim_rerank=MESH_SIM_RERANK,
+        # Eval hygiene: don't let Hebbian access-reinforcement mutate the mesh
+        # mid-benchmark (it would bias later questions by earlier ones and make
+        # runs non-idempotent).
+        reinforce_on_access=False,
     )
 
     # Map each node to the (first) edge it participates in, for speaker/date/text.
@@ -128,7 +139,7 @@ def render_mesh_context(mesh: Mesh, question: str) -> tuple[str, dict[str, Any]]
             edge_by_member.setdefault(m.node_id, e)
 
     q_lower = question.lower()
-    temporal = any(cue in q_lower for cue in _TEMPORAL_CUES)
+    temporal = (not MESH_NO_DATES) and any(cue in q_lower for cue in _TEMPORAL_CUES)
 
     # Take the top fact nodes (the raw turns) in reranked order, de-duplicated.
     picked: list[tuple[str, str, str, str]] = []  # (date, speaker, text, flag)
@@ -155,8 +166,11 @@ def render_mesh_context(mesh: Mesh, question: str) -> tuple[str, dict[str, Any]]
         # Chronological order helps "when / how long / before-after" reasoning.
         picked.sort(key=lambda t: t[0] or "9999")
 
-    lines = [f"{flag}[{date or 'unknown date'}] {speaker}: {text}"
-             for (date, speaker, text, flag) in picked]
+    if MESH_NO_DATES:
+        lines = [f"{flag}{speaker}: {text}" for (date, speaker, text, flag) in picked]
+    else:
+        lines = [f"{flag}[{date or 'unknown date'}] {speaker}: {text}"
+                 for (date, speaker, text, flag) in picked]
 
     ctx = "\n".join(lines) if lines else "(no relevant memory found)"
     stats = {

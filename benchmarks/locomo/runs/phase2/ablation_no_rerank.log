@@ -1,0 +1,14 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+conv=conv-26 qas=199  mesh=conv-26.embed.sqlite
+tuning: seeds=16 sim_rerank=0.0 turns=15
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 3045.03it/s]
+  [meshmind] 20/199  2.20 q/s  eta=81s
+  [meshmind] 40/199  2.12 q/s  eta=75s
+  [meshmind] 60/199  2.13 q/s  eta=65s
+  [meshmind] 80/199  2.11 q/s  eta=56s
+  [meshmind] 100/199  2.12 q/s  eta=47s
+  [meshmind] 120/199  2.09 q/s  eta=38s
+  [meshmind] 140/199  2.10 q/s  eta=28s
+  [meshmind] 160/199  2.10 q/s  eta=19s
+  [meshmind] 180/199  2.10 q/s  eta=9s
+wrote /home/ubuntu/projects/meshmind/benchmarks/locomo/runs/phase2/conv-26.meshmind.jsonl

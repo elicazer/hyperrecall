@@ -17,6 +17,7 @@ Output: runs/phase1/conv-26.embed.sqlite
 """
 from __future__ import annotations
 
+import json
 import shutil
 import sqlite3
 import sys
@@ -46,10 +47,37 @@ def main() -> int:
 
     conn = sqlite3.connect(str(DST))
     conn.row_factory = sqlite3.Row
-    rows = conn.execute("SELECT id, text FROM nodes ORDER BY created_at").fetchall()
+    rows = conn.execute("SELECT id, text, kind FROM nodes ORDER BY created_at").fetchall()
+
+    # For fact nodes (the original turns) prepend the speaker, mirroring how the
+    # vector-RAG baseline embeds "speaker: text". This is not cosmetic: the
+    # question "What is Caroline's identity?" has cosine 0.09 against the bare
+    # turn but 0.48 against "Caroline: <turn>" — the speaker name is a strong
+    # relevance signal, and embedding without it makes seed discovery blind.
+    speaker_of: dict[str, str] = {}
+    for r in conn.execute(
+        """SELECT hn.node_id AS nid, h.provenance AS prov
+           FROM hyperedge_nodes hn JOIN hyperedges h ON h.id = hn.hyperedge_id"""
+    ).fetchall():
+        if r["nid"] in speaker_of:
+            continue
+        try:
+            sp = (json.loads(r["prov"]) or {}).get("speaker", "")
+        except Exception:
+            sp = ""
+        if sp:
+            speaker_of[r["nid"]] = sp
+
     ids = [r["id"] for r in rows]
-    texts = [r["text"] for r in rows]
-    print(f"re-embedding {len(ids)} nodes with {EMBEDDER_NAME}")
+    texts = []
+    for r in rows:
+        sp = speaker_of.get(r["id"])
+        if r["kind"] == "fact" and sp:
+            texts.append(f"{sp}: {r['text']}")
+        else:
+            texts.append(r["text"])
+    print(f"re-embedding {len(ids)} nodes with {EMBEDDER_NAME} "
+          f"({sum(1 for r in rows if r['kind']=='fact')} fact nodes speaker-prefixed)")
 
     model = SentenceTransformer(EMBEDDER_NAME)
     vecs = model.encode(

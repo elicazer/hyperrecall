@@ -1,0 +1,164 @@
+{
+  "meshmind": {
+    "system": "meshmind",
+    "n_total": 199,
+    "by_category": {
+      "1": {
+        "name": "single-hop",
+        "n": 32,
+        "acc_correct": 0.125,
+        "acc_correct_or_partial": 0.344,
+        "avg_f1": 0.073,
+        "avg_bleu1": 0.05,
+        "labels": {
+          "wrong": 21,
+          "partial": 7,
+          "correct": 4
+        }
+      },
+      "2": {
+        "name": "multi-hop",
+        "n": 37,
+        "acc_correct": 0.081,
+        "acc_correct_or_partial": 0.568,
+        "avg_f1": 0.079,
+        "avg_bleu1": 0.034,
+        "labels": {
+          "partial": 18,
+          "wrong": 16,
+          "correct": 3
+        }
+      },
+      "3": {
+        "name": "temporal",
+        "n": 13,
+        "acc_correct": 0.462,
+        "acc_correct_or_partial": 0.538,
+        "avg_f1": 0.0,
+        "avg_bleu1": 0.0,
+        "labels": {
+          "wrong": 6,
+          "correct": 6,
+          "partial": 1
+        }
+      },
+      "4": {
+        "name": "open-domain",
+        "n": 70,
+        "acc_correct": 0.471,
+        "acc_correct_or_partial": 0.571,
+        "avg_f1": 0.285,
+        "avg_bleu1": 0.26,
+        "labels": {
+          "correct": 33,
+          "partial": 7,
+          "wrong": 30
+        }
+      },
+      "5": {
+        "name": "adversarial",
+        "n": 47,
+        "acc_correct": 0.851,
+        "acc_correct_or_partial": 0.851,
+        "avg_f1": 0.0,
+        "avg_bleu1": 0.0,
+        "labels": {
+          "wrong": 7,
+          "correct": 40
+        }
+      }
+    },
+    "overall": {
+      "acc_correct": 0.432,
+      "acc_correct_or_partial": 0.598,
+      "avg_f1": 0.127,
+      "avg_bleu1": 0.106,
+      "labels": {
+        "wrong": 80,
+        "partial": 33,
+        "correct": 86
+      }
+    }
+  },
+  "vector_rag": {
+    "system": "vector_rag",
+    "n_total": 199,
+    "by_category": {
+      "1": {
+        "name": "single-hop",
+        "n": 32,
+        "acc_correct": 0.156,
+        "acc_correct_or_partial": 0.469,
+        "avg_f1": 0.147,
+        "avg_bleu1": 0.113,
+        "labels": {
+          "wrong": 17,
+          "correct": 5,
+          "partial": 10
+        }
+      },
+      "2": {
+        "name": "multi-hop",
+        "n": 37,
+        "acc_correct": 0.081,
+        "acc_correct_or_partial": 0.514,
+        "avg_f1": 0.034,
+        "avg_bleu1": 0.009,
+        "labels": {
+          "partial": 16,
+          "wrong": 18,
+          "correct": 3
+        }
+      },
+      "3": {
+        "name": "temporal",
+        "n": 13,
+        "acc_correct": 0.615,
+        "acc_correct_or_partial": 0.769,
+        "avg_f1": 0.038,
+        "avg_bleu1": 0.01,
+        "labels": {
+          "correct": 8,
+          "wrong": 3,
+          "partial": 2
+        }
+      },
+      "4": {
+        "name": "open-domain",
+        "n": 70,
+        "acc_correct": 0.457,
+        "acc_correct_or_partial": 0.629,
+        "avg_f1": 0.357,
+        "avg_bleu1": 0.324,
+        "labels": {
+          "correct": 32,
+          "partial": 12,
+          "wrong": 26
+        }
+      },
+      "5": {
+        "name": "adversarial",
+        "n": 47,
+        "acc_correct": 0.83,
+        "acc_correct_or_partial": 0.83,
+        "avg_f1": 0.021,
+        "avg_bleu1": 0.021,
+        "labels": {
+          "wrong": 8,
+          "correct": 39
+        }
+      }
+    },
+    "overall": {
+      "acc_correct": 0.437,
+      "acc_correct_or_partial": 0.638,
+      "avg_f1": 0.163,
+      "avg_bleu1": 0.139,
+      "labels": {
+        "wrong": 72,
+        "correct": 87,
+        "partial": 40
+      }
+    }
+  }
+}
