@@ -62,7 +62,15 @@ canonicalized entity nodes — dense *and* connected.
 - `benchmarks/locomo/phase1_ingest_v2.py --limit N` re-ingests conv-26 turns
   end-to-end through v2 without crashing and writes graph + coreference stats to
   `runs/phase1_v2/conv-26.stats.json`. `--mock` runs offline.
-- `tests/test_extractor_v2.py` (7 tests) + module doctests pass fully offline.
+- `tests/test_extractor_v2.py` (8 tests) + module doctests pass fully offline.
+
+## Size
+
+`extractor_v2.py` is ~713 lines, slightly over the ~600 soft target. The
+overage is the required `--demo` CLI, the deterministic offline heuristic (so
+tests never hit the network), two prompts, two JSON schemas, and the validation
+dataclasses — not extra logic. Trimming further would mean cutting one of those
+load-bearing pieces, so I left the substance intact and only tightened prose.
 
 ## Guardrail / provider note
 
