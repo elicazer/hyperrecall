@@ -211,16 +211,18 @@ class Mesh:
 
             from .query.planner import GeminiPlannerClient, QueryPlanner
 
-            # Rerank scoring uses Gemini 2.5 Flash (guardrail); classification
-            # keeps the planner's default client so v2 behaviour is untouched.
-            rerank_llm = None
+            # Every LLM call on this path uses Gemini 2.5 Flash (guardrail):
+            # one shared Flash client drives classification, decomposition, and
+            # rerank scoring. (Old plan="v2" keeps the default pro client.)
+            flash = None
             if os.environ.get("GEMINI_API_KEY"):
                 try:
-                    rerank_llm = GeminiPlannerClient(model="gemini-2.5-flash")
+                    flash = GeminiPlannerClient(model="gemini-2.5-flash")
                 except RuntimeError:
-                    rerank_llm = None
+                    flash = None
             return QueryPlanner(
-                self.store, embed=self.embed, curve=self.curve, rerank_llm=rerank_llm
+                self.store, embed=self.embed, curve=self.curve,
+                llm=flash, rerank_llm=flash, use_gemini=False,
             ).recall(
                 query,
                 budget_tokens=budget_tokens,
