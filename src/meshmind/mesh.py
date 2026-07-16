@@ -189,7 +189,9 @@ class Mesh:
         prefer_newest: bool = True,
         reinforce_on_access: bool = True,
         sim_rerank: float = 0.0,
-        plan: Literal["v2"] | None = None,
+        plan: Literal["v2", "v2-rerank"] | None = None,
+        k_candidate: int = 25,
+        k_final: int = 8,
     ) -> Subgraph:
         """Retrieve a connected subgraph of memories relevant to ``query``."""
         if plan == "v2":
@@ -203,6 +205,33 @@ class Mesh:
                 prefer_newest=prefer_newest,
                 reinforce_on_access=reinforce_on_access,
                 sim_rerank=sim_rerank,
+            )
+        if plan == "v2-rerank":
+            import os
+
+            from .query.planner import GeminiPlannerClient, QueryPlanner
+
+            # Rerank scoring uses Gemini 2.5 Flash (guardrail); classification
+            # keeps the planner's default client so v2 behaviour is untouched.
+            rerank_llm = None
+            if os.environ.get("GEMINI_API_KEY"):
+                try:
+                    rerank_llm = GeminiPlannerClient(model="gemini-2.5-flash")
+                except RuntimeError:
+                    rerank_llm = None
+            return QueryPlanner(
+                self.store, embed=self.embed, curve=self.curve, rerank_llm=rerank_llm
+            ).recall(
+                query,
+                budget_tokens=budget_tokens,
+                k_hops=k_hops,
+                max_seeds=max_seeds,
+                prefer_newest=prefer_newest,
+                reinforce_on_access=reinforce_on_access,
+                sim_rerank=sim_rerank,
+                rerank=True,
+                k_candidate=k_candidate,
+                k_final=k_final,
             )
         if plan is not None:
             raise ValueError(f"unknown recall plan: {plan!r}")

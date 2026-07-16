@@ -98,11 +98,27 @@ class EdgeResult:
 
 
 @dataclass
+class RerankCandidate:
+    """A retrieved edge staged for question-conditional reranking."""
+
+    edge: Hyperedge
+    text: str
+    retrieval_score: float
+    original_rank: int = 0
+    llm_score: int | None = None
+    final_score: float = 0.0
+    new_rank: int = -1
+
+
+@dataclass
 class PlannedRecall(Subgraph):
     """Backward-compatible ``Subgraph`` enriched with planner output."""
 
     plan: QueryPlan | None = None
     results: list[EdgeResult] = field(default_factory=list)
+    # Populated only on the ``v2-rerank`` path: the batched-LLM rerank trace so
+    # callers can inspect which candidates moved and why.
+    rerank: dict[str, Any] | None = None
 
     def to_context_string(self) -> str:
         if not self.results:
@@ -171,6 +187,7 @@ class QueryPlanner:
         embed: EmbedFn = hash_embed,
         curve: DecayFn = exponential_decay,
         llm: LLMCallable | None = None,
+        rerank_llm: LLMCallable | None = None,
         use_gemini: bool = True,
         allow_heuristic_fallback: bool = True,
     ) -> None:
@@ -178,6 +195,10 @@ class QueryPlanner:
         self.embed = embed
         self.curve = curve
         self.allow_heuristic_fallback = allow_heuristic_fallback
+        # A dedicated scorer for the rerank pass. When unset, the reranker reuses
+        # ``self.llm`` (this keeps tests that inject a single ``llm`` working); the
+        # ``v2-rerank`` wiring passes a Gemini 2.5 Flash client here explicitly.
+        self.rerank_llm = rerank_llm
         if llm is not None:
             self.llm = llm
         elif use_gemini and os.environ.get("GEMINI_API_KEY"):
@@ -248,6 +269,9 @@ class QueryPlanner:
         prefer_newest: bool = True,
         reinforce_on_access: bool = True,
         sim_rerank: float = 0.0,
+        rerank: bool = False,
+        k_candidate: int = 25,
+        k_final: int = 8,
     ) -> PlannedRecall:
         plan = self.decompose(question, self.classify(question))
         kwargs = dict(
@@ -267,10 +291,18 @@ class QueryPlanner:
         subgraph = self._post_filter(subgraph, keep_history=keep_history)
         if plan.question_class == "temporal":
             subgraph = self._temporal_filter(subgraph, plan.time_constraints)
+        # Question-conditional rerank sits between candidate retrieval and the
+        # answerer-facing assembly: it re-scores the retrieved edges against the
+        # actual question and keeps only the top ``k_final`` before rendering.
+        rerank_meta: dict[str, Any] | None = None
+        if rerank:
+            subgraph, rerank_meta = self._rerank_subgraph(
+                question, subgraph, k_candidate=k_candidate, k_final=k_final
+            )
         results = self._assemble(subgraph, keep_history=keep_history)
         return PlannedRecall(
             query=question, nodes=subgraph.nodes, hyperedges=subgraph.hyperedges,
-            plan=plan, results=results,
+            plan=plan, results=results, rerank=rerank_meta,
         )
 
     def _entity_recall(self, question: str, entities: Sequence[str], **kwargs: Any) -> Subgraph:
@@ -375,6 +407,154 @@ class QueryPlanner:
         ids = {nid for edge in edges for nid in edge.node_ids}
         return Subgraph(graph.query, [sn for sn in graph.nodes if sn.node.id in ids], edges)
 
+    # -- question-conditional rerank --------------------------------------
+    def _rerank_subgraph(
+        self, question: str, graph: Subgraph, *, k_candidate: int, k_final: int
+    ) -> tuple[Subgraph, dict[str, Any]]:
+        """Rebuild ``graph`` keeping only the top ``k_final`` reranked edges.
+
+        On any failure (no LLM, malformed scores) this degrades to the original
+        retrieval order truncated to ``k_final`` -- never a crash.
+        """
+        candidates = self._build_candidates(graph, k_candidate)
+        kept, meta = self.rerank_candidates(question, candidates, k_final=k_final)
+        kept_order = {c.edge.id: i for i, c in enumerate(kept)}
+        edges = [e for e in graph.hyperedges if e.id in kept_order]
+        edges.sort(key=lambda e: kept_order[e.id])
+        keep_node_ids = {nid for e in edges for nid in e.node_ids}
+        nodes = [sn for sn in graph.nodes if sn.node.id in keep_node_ids]
+        return Subgraph(graph.query, nodes, edges), meta
+
+    def _build_candidates(self, graph: Subgraph, k_candidate: int) -> list[RerankCandidate]:
+        """Derive per-edge candidates with a retrieval score from member nodes."""
+        node_score: dict[str, float] = {}
+        for sn in graph.nodes:
+            score = sn.rank_score or sn.score
+            node_score[sn.node.id] = max(node_score.get(sn.node.id, 0.0), score)
+        candidates: list[RerankCandidate] = []
+        for edge in graph.hyperedges:
+            score = max((node_score.get(nid, 0.0) for nid in edge.node_ids), default=0.0)
+            candidates.append(RerankCandidate(
+                edge=edge, text=self._candidate_text(edge), retrieval_score=score,
+            ))
+        candidates.sort(key=lambda c: c.retrieval_score, reverse=True)
+        candidates = candidates[:k_candidate]
+        for i, cand in enumerate(candidates):
+            cand.original_rank = i
+        return candidates
+
+    def _candidate_text(self, edge: Hyperedge) -> str:
+        """A short text repr of an edge: its source/summary plus participants."""
+        prov = edge.provenance or {}
+        summary = str(prov.get("source_text") or prov.get("summary") or "").strip()
+        parts: list[str] = []
+        for member in edge.members:
+            node = self.store.get_node(member.node_id, curve=self.curve)
+            if node is None:
+                continue
+            parts.append(f"{member.role}={node.text}" if member.role else node.text)
+        participants = "; ".join(parts)
+        if summary and participants:
+            return f"{summary} ({participants})"
+        return summary or participants or f"[{edge.type}]"
+
+    def rerank_candidates(
+        self,
+        question: str,
+        candidates: Sequence[RerankCandidate],
+        *,
+        k_final: int = 8,
+    ) -> tuple[list[RerankCandidate], dict[str, Any]]:
+        """Batch-score candidates against the question and reorder them.
+
+        Returns ``(top_k_final, metadata)``. Combines the LLM relevance judgement
+        with the original retrieval score as
+        ``0.6 * llm/10 + 0.4 * normalized_retrieval``. Falls back to the original
+        retrieval order (no LLM, or a score-count mismatch) rather than crashing.
+        """
+        candidates = list(candidates)
+        if not candidates:
+            return [], {"applied": False, "reason": "no_candidates",
+                        "n_candidates": 0, "deltas": []}
+
+        llm = self.rerank_llm if self.rerank_llm is not None else self.llm
+        scores: list[int] | None = None
+        if llm is not None:
+            try:
+                scores = self._llm_score_batch(llm, question, candidates)
+            except Exception:
+                if not self.allow_heuristic_fallback:
+                    raise
+                scores = None
+
+        if scores is None or len(scores) != len(candidates):
+            reason = "llm_unavailable" if scores is None else "score_count_mismatch"
+            return candidates[:k_final], {
+                "applied": False, "reason": reason,
+                "n_candidates": len(candidates), "k_final": k_final, "deltas": [],
+            }
+
+        max_retrieval = max((c.retrieval_score for c in candidates), default=0.0) or 1.0
+        for cand, score in zip(candidates, scores):
+            cand.llm_score = score
+            norm_retrieval = cand.retrieval_score / max_retrieval
+            cand.final_score = 0.6 * (score / 10.0) + 0.4 * norm_retrieval
+
+        reranked = sorted(candidates, key=lambda c: c.final_score, reverse=True)
+        for i, cand in enumerate(reranked):
+            cand.new_rank = i
+        top = reranked[:k_final]
+        top_ids = {c.edge.id for c in top}
+
+        deltas = [
+            {
+                "edge_id": c.edge.id,
+                "text": c.text[:120],
+                "retrieval_score": round(c.retrieval_score, 4),
+                "llm_score": c.llm_score,
+                "final_score": round(c.final_score, 4),
+                "original_rank": c.original_rank,
+                "new_rank": c.new_rank,
+                "rank_delta": c.original_rank - c.new_rank,
+                "in_top_k": c.edge.id in top_ids,
+            }
+            for c in reranked
+        ]
+        promotions = sum(
+            1 for c in reranked
+            if c.edge.id in top_ids and c.original_rank >= k_final
+        )
+        return top, {
+            "applied": True,
+            "n_candidates": len(candidates),
+            "k_final": k_final,
+            "promoted_into_top_k": promotions,
+            "deltas": deltas,
+        }
+
+    def _llm_score_batch(
+        self, llm: LLMCallable, question: str, candidates: Sequence[RerankCandidate]
+    ) -> list[int]:
+        """One batched Gemini call scoring every candidate 0-10 for the question."""
+        lines = "\n".join(
+            f"{i}: {c.text.replace(chr(10), ' ')[:240]}"
+            for i, c in enumerate(candidates)
+        )
+        prompt = (
+            "You rate candidate memories on how directly each one helps answer a "
+            "question. Score 10 = directly answers it; 0 = irrelevant.\n"
+            f"Question: {question}\n\n"
+            "Memories (index: text):\n" + lines + "\n\n"
+            "Return JSON only in exactly this shape: "
+            '{"scores": [<int 0-10>, ...]} with exactly '
+            f"{len(candidates)} integers, one per memory index, in the same order."
+        )
+        raw = _as_json(llm(prompt))
+        values = raw.get("scores")
+        if not isinstance(values, list):
+            raise ValueError("rerank response missing a 'scores' array")
+        return [_coerce_score(v) for v in values]
+
     def _assemble(self, graph: Subgraph, *, keep_history: bool) -> list[EdgeResult]:
         """Stage 4: materialize participants, timestamp, and provenance."""
         results: list[EdgeResult] = []
@@ -469,6 +649,19 @@ def _heuristic_decompose(question: str) -> tuple[str, ...]:
     if len(cleaned) >= 2:
         return cleaned[:3]
     return (question, f"What facts connect the entities in: {question}")
+
+
+def _coerce_score(value: Any) -> int:
+    """Coerce an LLM-returned score into an int clamped to ``0..10``.
+
+    Non-numeric / malformed entries fall to ``0`` (treated as irrelevant) rather
+    than aborting the whole batch.
+    """
+    try:
+        score = int(round(float(value)))
+    except (TypeError, ValueError):
+        return 0
+    return max(0, min(10, score))
 
 
 def _as_json(value: str | dict[str, Any]) -> dict[str, Any]:
