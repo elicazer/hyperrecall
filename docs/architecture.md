@@ -4,7 +4,7 @@ A layered view of the codebase. Each layer depends only on those below it.
 
 ```
                     ┌──────────────────────────────┐
-   public API  ───▶ │  meshmind.Mesh  (mesh.py)    │
+   public API  ───▶ │  hyperrecall.Mesh  (mesh.py)    │
                     └──────────────┬───────────────┘
              ┌─────────────┬───────┴───────┬─────────────┐
              ▼             ▼               ▼             ▼

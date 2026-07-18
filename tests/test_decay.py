@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import time
 
-from meshmind import Mesh, Node
-from meshmind.decay import (
+from hyperrecall import Mesh, Node
+from hyperrecall.decay import (
     SECONDS_PER_DAY,
     exponential_decay,
     half_life_to_rate,

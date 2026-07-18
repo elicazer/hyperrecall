@@ -1,6 +1,6 @@
-"""Contradiction detection: MeshMind surfaces both sides with a conflict flag."""
+"""Contradiction detection: HyperRecall surfaces both sides with a conflict flag."""
 
-from meshmind import Mesh
+from hyperrecall import Mesh
 
 mesh = Mesh(":memory:")
 

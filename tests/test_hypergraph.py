@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from meshmind import Hyperedge, HyperedgeMember, Mesh, Node
-from meshmind.models import EXPERIENCE
+from hyperrecall import Hyperedge, HyperedgeMember, Mesh, Node
+from hyperrecall.models import EXPERIENCE
 
 
 def test_hyperedge_has_arity_at_least_three():
@@ -79,7 +79,7 @@ def test_edge_with_arity_below_two_is_rejected():
 def test_same_node_participates_in_multiple_edges():
     mesh = Mesh(":memory:")
     a = mesh.add_node(Node(text="Eli"))
-    b = mesh.add_node(Node(text="MeshMind"))
+    b = mesh.add_node(Node(text="HyperRecall"))
     c = mesh.add_node(Node(text="TEDx"))
     mesh.add_hyperedge(Hyperedge(type=EXPERIENCE, members=[HyperedgeMember(a.id, "p"), HyperedgeMember(b.id, "proj")]))
     mesh.add_hyperedge(Hyperedge(type=EXPERIENCE, members=[HyperedgeMember(a.id, "p"), HyperedgeMember(c.id, "topic")]))

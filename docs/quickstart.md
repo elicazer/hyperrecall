@@ -2,11 +2,11 @@
 
 ## Install
 
-MeshMind isn't on PyPI yet. Install from source:
+HyperRecall isn't on PyPI yet. Install from source:
 
 ```bash
-git clone https://github.com/eliazer/meshmind
-cd meshmind
+git clone https://github.com/eliazer/hyperrecall
+cd hyperrecall
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 ```
@@ -17,7 +17,7 @@ the Python stdlib `sqlite3`.
 ## Your first mesh
 
 ```python
-from meshmind import Mesh
+from hyperrecall import Mesh
 
 mesh = Mesh(":memory:")          # in-memory; use Mesh("./mesh.db") to persist
 
@@ -27,7 +27,7 @@ mesh.remember(
     participants=["Eli", "David"],
     context={"topic": "TEDx", "session": "abc123"},
 )
-mesh.remember("MeshMind is a hypergraph memory system", context={"topic": "MeshMind"})
+mesh.remember("HyperRecall is a hypergraph memory system", context={"topic": "HyperRecall"})
 
 # Recall a connected subgraph relevant to a query.
 result = mesh.recall("TEDx applications", budget_tokens=500)
@@ -76,19 +76,19 @@ restored = Mesh.import_dir("./my_memory", ":memory:")
 ## CLI
 
 ```bash
-meshmind remember "Eli is building MeshMind" -p Eli --topic MeshMind --db mesh.db
-meshmind recall "what is meshmind" --db mesh.db --budget 300
-meshmind export mesh.db ./export
-meshmind import ./export restored.db
-meshmind stats mesh.db
-meshmind demo
+hyperrecall remember "Eli is building HyperRecall" -p Eli --topic HyperRecall --db mesh.db
+hyperrecall recall "what is hyperrecall" --db mesh.db --budget 300
+hyperrecall export mesh.db ./export
+hyperrecall import ./export restored.db
+hyperrecall stats mesh.db
+hyperrecall demo
 ```
 
 ## Custom embeddings and decay
 
 ```python
 import numpy as np
-from meshmind import Mesh
+from hyperrecall import Mesh
 
 def my_embed(text: str) -> np.ndarray:
     ...  # call your favourite embedding model, return a 1-D float vector

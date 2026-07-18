@@ -1,6 +1,6 @@
 # Philosophy
 
-*Why a hypergraph, why neuroscience, and what MeshMind is really for.*
+*Why a hypergraph, why neuroscience, and what HyperRecall is really for.*
 
 ## Memory is not storage
 
@@ -15,7 +15,7 @@ reassembles, complete with the people who were there and how you felt. Memories
 fade when unused and sharpen when revisited. New information doesn't overwrite old
 information; it sits alongside it, sometimes in tension.
 
-MeshMind takes that seriously as an engineering spec, not a metaphor.
+HyperRecall takes that seriously as an engineering spec, not a metaphor.
 
 ## Why hypergraph
 
@@ -27,7 +27,7 @@ together and you lose the fact that they were ever one thing. That loss is
 invisible until you try to recall the episode and get back disconnected shards.
 
 A hyperedge keeps the episode whole. Arity is arbitrary; each participant keeps
-its role. This is the one non-negotiable in MeshMind: **if it ever became a
+its role. This is the one non-negotiable in HyperRecall: **if it ever became a
 triple store, it would have deleted its own reason to exist.** A test enforces
 it.
 
@@ -44,7 +44,7 @@ Four borrowed mechanisms, each earning its place:
   a feedback loop that surfaces what matters.
 - **Contradiction and supersession** give memory *epistemics*. Beliefs conflict;
   beliefs change. A memory system that silently overwrites is lying about its own
-  history. MeshMind keeps both sides, flags them, and lets the agent reason.
+  history. HyperRecall keeps both sides, flags them, and lets the agent reason.
 
 None of this requires a neural network. It's a handful of well-chosen dynamics
 over a graph — cheap, inspectable, and honest.
@@ -53,7 +53,7 @@ over a graph — cheap, inspectable, and honest.
 
 Your agent's memory is among the most personal artifacts software will ever hold
 — what it knows about you, your projects, your decisions. It should not be
-trapped inside one vendor's proprietary store. MeshMind exports to a directory of
+trapped inside one vendor's proprietary store. HyperRecall exports to a directory of
 plain Markdown files you can read, diff, edit, back up, and carry between tools:
 Claude, Cursor, OpenClaw, your own scripts. "USB-C for AI memory."
 
@@ -64,7 +64,7 @@ by no one.
 ## The pitch, in one breath
 
 > Current AI memory forgets what compaction deletes, flattens what vector stores
-> can't structure, and shreds what knowledge graphs can't hold whole. MeshMind
+> can't structure, and shreds what knowledge graphs can't hold whole. HyperRecall
 > stores memory the way brains do — a hypergraph of episodes, retrieved by
 > spreading activation, that decays, strengthens, contradicts, and supersedes —
 > in a portable, open format that belongs to you.

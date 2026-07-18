@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from meshmind import Hyperedge, HyperedgeMember, Mesh, Node
-from meshmind.models import EXPERIENCE
+from hyperrecall import Hyperedge, HyperedgeMember, Mesh, Node
+from hyperrecall.models import EXPERIENCE
 
 
 def _build_mesh() -> Mesh:
@@ -14,7 +14,7 @@ def _build_mesh() -> Mesh:
         context={"topic": "TEDx", "session": "abc123"},
         confidence=0.9,
     )
-    mesh.remember("MeshMind uses a real hypergraph", context={"topic": "MeshMind"})
+    mesh.remember("HyperRecall uses a real hypergraph", context={"topic": "HyperRecall"})
     a = mesh.add_node(Node(text="claim one", confidence=0.7))
     b = mesh.add_node(Node(text="claim two", confidence=0.7))
     mesh.contradict(a.id, b.id, note="conflict")

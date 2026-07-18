@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from meshmind import Mesh
+from hyperrecall import Mesh
 
 
 def test_remember_and_recall_roundtrip():
     mesh = Mesh(":memory:")
-    mesh.remember("Eli is building MeshMind", participants=["Eli"], context={"topic": "MeshMind"})
-    mesh.remember("MeshMind uses hypergraphs", context={"topic": "MeshMind"})
-    mesh.remember("Hypergraphs beat knowledge graphs for memory", context={"topic": "MeshMind"})
+    mesh.remember("Eli is building HyperRecall", participants=["Eli"], context={"topic": "HyperRecall"})
+    mesh.remember("HyperRecall uses hypergraphs", context={"topic": "HyperRecall"})
+    mesh.remember("Hypergraphs beat knowledge graphs for memory", context={"topic": "HyperRecall"})
 
-    result = mesh.recall("what is meshmind")
+    result = mesh.recall("what is hyperrecall")
     assert result.nodes, "recall should activate at least one node"
     texts = " ".join(sn.node.text.lower() for sn in result.nodes)
-    assert "meshmind" in texts
+    assert "hyperrecall" in texts
     mesh.close()
 
 
@@ -45,9 +45,9 @@ def test_inspect_node_reports_edges_and_activation():
 def test_budget_limits_result_size():
     mesh = Mesh(":memory:")
     for i in range(10):
-        mesh.remember(f"Fact number {i} about meshmind and memory systems", context={"topic": "MeshMind"})
-    small = mesh.recall("meshmind memory", budget_tokens=20)
-    big = mesh.recall("meshmind memory", budget_tokens=100000)
+        mesh.remember(f"Fact number {i} about hyperrecall and memory systems", context={"topic": "HyperRecall"})
+    small = mesh.recall("hyperrecall memory", budget_tokens=20)
+    big = mesh.recall("hyperrecall memory", budget_tokens=100000)
     assert len(small.nodes) <= len(big.nodes)
     mesh.close()
 

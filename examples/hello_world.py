@@ -1,14 +1,14 @@
-"""MeshMind hello world: ingest -> recall -> inspect, in under 40 lines."""
+"""HyperRecall hello world: ingest -> recall -> inspect, in under 40 lines."""
 
-from meshmind import Mesh
+from hyperrecall import Mesh
 
 mesh = Mesh(":memory:")  # in-memory hypergraph
 
 # Remember a few related facts. A two-participant turn produces an Experience
 # hyperedge of arity >= 3 (statement + Eli + topic node).
-eli = mesh.remember("Eli is building MeshMind", participants=["Eli"], context={"topic": "MeshMind"})
-mesh.remember("MeshMind uses hypergraphs", context={"topic": "MeshMind"})
-mesh.remember("Hypergraphs beat knowledge graphs for memory", context={"topic": "MeshMind"})
+eli = mesh.remember("Eli is building HyperRecall", participants=["Eli"], context={"topic": "HyperRecall"})
+mesh.remember("HyperRecall uses hypergraphs", context={"topic": "HyperRecall"})
+mesh.remember("Hypergraphs beat knowledge graphs for memory", context={"topic": "HyperRecall"})
 
 # Show a real hyperedge with arity >= 3.
 edge = max(mesh.store.all_hyperedges(), key=lambda e: e.arity)
@@ -17,13 +17,13 @@ print("  members:", [(m.role, m.node_id[:10]) for m in edge.members])
 print()
 
 # Recall a connected subgraph, not a flat list of chunks.
-result = mesh.recall("what is meshmind", budget_tokens=300)
+result = mesh.recall("what is hyperrecall", budget_tokens=300)
 print(result.to_markdown())
 print()
 
 # Fresh vs decayed activation: reinforce one node, backdate another.
 import time
-from meshmind.decay import SECONDS_PER_DAY
+from hyperrecall.decay import SECONDS_PER_DAY
 
 mesh.store.reinforce_node(eli.id)  # Hebbian boost from access
 fresh = mesh.store.live_activation(eli.id)

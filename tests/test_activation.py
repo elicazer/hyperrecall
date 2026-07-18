@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from meshmind import Hyperedge, HyperedgeMember, Mesh, Node
-from meshmind.models import EXPERIENCE
-from meshmind.retrieval.activation import spread
+from hyperrecall import Hyperedge, HyperedgeMember, Mesh, Node
+from hyperrecall.models import EXPERIENCE
+from hyperrecall.retrieval.activation import spread
 
 
 def _chain_mesh() -> tuple[Mesh, list[str]]:
@@ -66,8 +66,8 @@ def test_returns_traversed_edges():
 
 def test_recall_ranks_direct_match_first():
     mesh = Mesh(":memory:")
-    mesh.remember("MeshMind is a hypergraph memory", context={"topic": "MeshMind"})
+    mesh.remember("HyperRecall is a hypergraph memory", context={"topic": "HyperRecall"})
     mesh.remember("The weather in Newport is sunny", context={"topic": "weather"})
     res = mesh.recall("hypergraph memory")
-    assert res.nodes[0].node.text.lower().startswith("meshmind")
+    assert res.nodes[0].node.text.lower().startswith("hyperrecall")
     mesh.close()

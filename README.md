@@ -1,6 +1,6 @@
-# MeshMind
+# HyperRecall
 
-**MeshMind gives AI agents memory that works the way brains do — not a bag of chunks, a web of experiences.**
+**HyperRecall gives AI agents memory that works the way brains do — not a bag of chunks, a web of experiences.**
 
 Most "AI memory" today is a vector database with a nice API: you embed text, you
 store chunks, you retrieve the nearest ones. It has no structure, no notion of
@@ -8,7 +8,7 @@ time, no idea that two memories contradict each other, and no concept of one
 fact making another obsolete. When your context window fills up and gets
 compacted, the nuance is gone for good.
 
-MeshMind is different. It stores memory as a **hypergraph** — first-class
+HyperRecall is different. It stores memory as a **hypergraph** — first-class
 relations that bind *many* things at once (a person, a project, a decision, an
 outcome, a moment in time) — and retrieves it with **spreading activation**, the
 same mechanism cognitive scientists use to model human recall. Memories
@@ -26,20 +26,20 @@ between tools.
 ## Quickstart
 
 ```bash
-git clone https://github.com/eliazer/meshmind
-cd meshmind
+git clone https://github.com/eliazer/hyperrecall
+cd hyperrecall
 pip install -e .
-# (aspirational, once published: pip install meshmind)
+# (aspirational, once published: pip install hyperrecall)
 ```
 
 ```python
-from meshmind import Mesh
+from hyperrecall import Mesh
 
 mesh = Mesh(":memory:")                       # or Mesh("./mesh.db")
-mesh.remember("Eli is building MeshMind", participants=["Eli"], context={"topic": "MeshMind"})
-mesh.remember("MeshMind uses hypergraphs", context={"topic": "MeshMind"})
+mesh.remember("Eli is building HyperRecall", participants=["Eli"], context={"topic": "HyperRecall"})
+mesh.remember("HyperRecall uses hypergraphs", context={"topic": "HyperRecall"})
 
-result = mesh.recall("what is meshmind", budget_tokens=300)
+result = mesh.recall("what is hyperrecall", budget_tokens=300)
 print(result.to_context_string())             # prompt-ready memory
 ```
 
@@ -49,16 +49,16 @@ Try the demos:
 python examples/hello_world.py         # ingest → recall → inspect, with decay
 python examples/contradiction_demo.py  # conflict detection
 python examples/portable_export.py     # export to Markdown and re-import
-meshmind demo                          # the CLI does the same
+hyperrecall demo                          # the CLI does the same
 ```
 
 ---
 
 ## Why not just use Mem0 / Zep?
 
-An honest comparison. These are good tools; MeshMind makes different bets.
+An honest comparison. These are good tools; HyperRecall makes different bets.
 
-| | Vector memory (naive RAG) | Mem0 / Zep (KG memory) | **MeshMind** |
+| | Vector memory (naive RAG) | Mem0 / Zep (KG memory) | **HyperRecall** |
 |---|---|---|---|
 | Structure | none — flat chunks | knowledge graph: `(head, relation, tail)` triples | **hypergraph: N-ary edges with roles** |
 | One "Eli asked David about TEDx on Jul 13" fact | 1 opaque chunk | ~4–6 lossy triples that lose the *co-occurrence* | **1 `Experience` edge binding all 5 participants** |
@@ -74,7 +74,7 @@ The core disagreement is **triples vs. hyperedges**. A knowledge graph shreds
 "Eli asked David about TEDx applications on July 13 at 8pm" into a handful of
 binary edges (`Eli —asked→ David`, `conversation —about→ TEDx`, …). The fact
 that these all happened *in one episode* — the thing a human actually
-remembers — is exactly what gets lost. MeshMind keeps the episode whole as a
+remembers — is exactly what gets lost. HyperRecall keeps the episode whole as a
 single hyperedge. See [`DESIGN.md`](DESIGN.md) for the full argument.
 
 ---
@@ -120,7 +120,7 @@ single hyperedge. See [`DESIGN.md`](DESIGN.md) for the full argument.
 - [x] Contradiction + supersession semantics
 - [x] Portable Markdown+YAML export/import (lossless)
 - [x] SQLite + FTS5 storage, numpy embedding search
-- [x] CLI (`meshmind remember | recall | export | import | demo`)
+- [x] CLI (`hyperrecall remember | recall | export | import | demo`)
 - [ ] **LLM-based ingestion** — extract atomic nodes + typed edges from raw turns
 - [ ] Pluggable real embedding models (OpenAI, local sentence-transformers)
 - [ ] Automatic contradiction/supersession detection at ingest

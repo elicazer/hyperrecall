@@ -1,4 +1,4 @@
-"""Portable export: a MeshMind database is a directory of Markdown files.
+"""Portable export: a HyperRecall database is a directory of Markdown files.
 
 Run this, then open ``mesh_export/nodes/*.md`` — each memory is a human-readable
 file with YAML frontmatter. Re-importing reproduces the database losslessly:
@@ -7,7 +7,7 @@ the "USB-C for AI memory" angle.
 
 from pathlib import Path
 
-from meshmind import Mesh
+from hyperrecall import Mesh
 
 mesh = Mesh(":memory:")
 mesh.remember(
@@ -16,7 +16,7 @@ mesh.remember(
     context={"topic": "TEDx", "session": "abc123"},
     confidence=0.9,
 )
-mesh.remember("MeshMind exports to portable Markdown", context={"topic": "MeshMind"})
+mesh.remember("HyperRecall exports to portable Markdown", context={"topic": "HyperRecall"})
 
 out = Path("mesh_export")
 mesh.export(out)

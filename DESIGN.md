@@ -1,6 +1,6 @@
-# MeshMind Design
+# HyperRecall Design
 
-This document explains what MeshMind is, why it is built on a hypergraph rather
+This document explains what HyperRecall is, why it is built on a hypergraph rather
 than a knowledge graph or a vector store, and how each subsystem works. It is
 the canonical record of the design decisions made while scaffolding v0.0.1.
 
@@ -28,9 +28,9 @@ on vectors by adding structure — but they model that structure as
 `(head, relation, tail)` **triples**. A triple is a binary edge: it can only
 ever relate *two* things. Real episodes relate *many* things at once, and
 shredding an episode into binary edges destroys the very co-occurrence that made
-it a memory. More on this below, because it is the crux of MeshMind.
+it a memory. More on this below, because it is the crux of HyperRecall.
 
-MeshMind's bet: **the unit of memory is the episode, and the episode is
+HyperRecall's bet: **the unit of memory is the episode, and the episode is
 inherently N-ary.** The right substrate is a hypergraph.
 
 ---
@@ -38,7 +38,7 @@ inherently N-ary.** The right substrate is a hypergraph.
 ## 2. Why hypergraphs specifically
 
 A **hypergraph** generalizes a graph: an edge (a *hyperedge*) can connect any
-number of nodes, not just two. In MeshMind a hyperedge is a first-class object
+number of nodes, not just two. In HyperRecall a hyperedge is a first-class object
 with an id, a type, an activation weight, a decay rate, provenance, metadata,
 and a set of **members**, where each member is a node paired with a *role* and a
 *weight*.
@@ -52,7 +52,7 @@ Suppose the agent observes:
 
 The episode relates **five** things: a *person who asked* (Eli), a *person
 asked* (David), a *topic* (TEDx applications), a *place/event* (the Newport
-event), and a *time* (Jul 13, 8pm). In MeshMind this is **one** `Experience`
+event), and a *time* (Jul 13, 8pm). In HyperRecall this is **one** `Experience`
 hyperedge:
 
 ```
@@ -94,7 +94,7 @@ Look at what happened:
    that Eli and David were the people talking about it is two more joins away and
    might be pruned by a top-k cutoff.
 
-Reification is essentially a hand-rolled, lossy hyperedge. MeshMind makes the
+Reification is essentially a hand-rolled, lossy hyperedge. HyperRecall makes the
 hyperedge the primitive, so none of this is necessary. Arity is arbitrary, roles
 are structural (not baked into relation strings), and the episode stays whole.
 
@@ -160,7 +160,7 @@ chunks, so the model receives memory *with its structure attached*.
 
 ## 4. Storage schema
 
-MeshMind persists to a **single SQLite file** (`meshmind/storage/schema.sql`).
+HyperRecall persists to a **single SQLite file** (`hyperrecall/storage/schema.sql`).
 The tables:
 
 - **`nodes`** — id, text, kind, confidence, decay_rate, created_at, metadata(JSON).
@@ -183,7 +183,7 @@ The tables:
 The spec offered a choice between `sqlite-vss` and storing embeddings as blobs
 with numpy search. **We chose BLOBs + numpy.** Rationale:
 
-- **Portability first.** A MeshMind database must be a single file that opens
+- **Portability first.** A HyperRecall database must be a single file that opens
   anywhere with the Python stdlib `sqlite3` — no compiled extension to install,
   version-match, or ship per-platform. `sqlite-vss` is a native extension and
   would break the "one portable file, zero native deps" promise.
@@ -199,8 +199,8 @@ with numpy search. **We chose BLOBs + numpy.** Rationale:
 
 ## 5. Decay and reinforcement math
 
-Human memory forgets what it doesn't use and strengthens what it does. MeshMind
-models both with small, pluggable functions in `meshmind/decay.py`.
+Human memory forgets what it doesn't use and strengthens what it does. HyperRecall
+models both with small, pluggable functions in `hyperrecall/decay.py`.
 
 **Decay (forgetting).** The default is an Ebbinghaus-style exponential curve:
 
@@ -235,7 +235,7 @@ These are dedicated hyperedge types with retrieval-time meaning.
 **Contradiction.** A `Contradicts` hyperedge (members in role `claim`) links two
 or more mutually-exclusive nodes. Retrieval **surfaces all of them** and flags
 each with `contradicted_by` (and a `[CONFLICT]` marker in the context string).
-MeshMind deliberately does *not* auto-resolve the conflict — the agent is better
+HyperRecall deliberately does *not* auto-resolve the conflict — the agent is better
 placed to decide, and silently picking one is how KG memory loses information.
 `mesh.contradictions()` enumerates every conflicting pair with its edge.
 
@@ -295,7 +295,7 @@ Scope discipline for v0.0.1. Explicitly out of scope, by decision:
 - **Automatic contradiction/supersession detection.** The *edges* and their
   retrieval semantics are implemented; *deciding* when to add them is left to the
   caller (or a future LLM ingest step).
-- **Federated sync, encryption, cloud.** MeshMind is a local, single-file library.
+- **Federated sync, encryption, cloud.** HyperRecall is a local, single-file library.
   The portable format is the intended sync substrate; encryption and multi-agent
   sync are future work.
 
