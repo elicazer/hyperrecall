@@ -26,7 +26,7 @@ between tools.
 ## Quickstart
 
 ```bash
-git clone https://github.com/eliazer/hyperrecall
+git clone https://github.com/elicazer/hyperrecall
 cd hyperrecall
 pip install -e .
 # (aspirational, once published: pip install hyperrecall)

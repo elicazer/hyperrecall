@@ -5,7 +5,7 @@
 HyperRecall isn't on PyPI yet. Install from source:
 
 ```bash
-git clone https://github.com/eliazer/hyperrecall
+git clone https://github.com/elicazer/hyperrecall
 cd hyperrecall
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
